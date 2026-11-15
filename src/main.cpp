@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "board.h"
+#include "link.h"
 #include "net.h"
 #include "portal.h"
 #include "quota.h"
@@ -37,6 +38,13 @@ static void buildPages() {
     if (pageIndex >= pageCount) pageIndex = 0;
 }
 
+static void applySettings() {
+    uiApplyTheme();
+    setenv("TZ", settings.tz.c_str(), 1);
+    tzset();
+    buildPages();
+}
+
 static void renderFull() {
     if (helpShown) {
         uiHelpScreen();
@@ -48,19 +56,27 @@ static void renderFull() {
 }
 
 static void renderValues() {
-    if (helpShown) {
-        uiHelpScreen();
-        return;
-    }
     if (partialsSinceFull >= PARTIALS_BEFORE_FULL) {
         renderFull();
         return;
     }
-    uiRenderValues(pages[pageIndex]);
+    if (helpShown)
+        uiHelpScreen();
+    else
+        uiRenderValues(pages[pageIndex]);
     partialsSinceFull++;
 }
 
 static void fetchAndRender() {
+    if (settings.source == SOURCE_MAC) {
+        netConnectWifi(8000);
+        sensorsRead();
+        lastFetch = millis();
+        lastClock = millis();
+        renderValues();
+        return;
+    }
+
     uiSetBusy(true);
     uiRenderValues(pages[pageIndex]);
     partialsSinceFull++;
@@ -101,11 +117,11 @@ static void onShort(uint8_t pin) {
             helpShown = false;
         else
             pageIndex = (pageIndex + 1) % pageCount;
-        renderFull();
+        renderValues();
         return;
     }
     helpShown = !helpShown;
-    renderFull();
+    renderValues();
 }
 
 static void onLong(uint8_t pin) {
@@ -156,14 +172,12 @@ void setup() {
     digitalWrite(PIN_CODEC_EN, LOW);
 
     settings.load();
-    uiApplyTheme();
-    setenv("TZ", settings.tz.c_str(), 1);
-    tzset();
+    applySettings();
 
     uiInit();
     sensorsInit();
     quotaInit();
-    buildPages();
+    linkStart();
 
     bool wantPortal = digitalRead(PIN_BOOT_BTN) == LOW;
     if (!settings.wifiSsid.length()) wantPortal = true;
@@ -172,17 +186,23 @@ void setup() {
         return;
     }
 
-    uiMessage("Connecting", ("Wi-Fi " + settings.wifiSsid).c_str(),
-              ("proxy " + settings.proxyHost + ":" + String(settings.proxyPort)).c_str());
+    String detail = settings.source == SOURCE_MAC
+                        ? String("numbers from Agent Meter over Bluetooth")
+                        : "proxy " + settings.proxyHost + ":" + String(settings.proxyPort);
+    uiMessage("Connecting", ("Wi-Fi " + settings.wifiSsid).c_str(), detail.c_str());
 
-    if (!netConnectWifi()) {
+    if (netConnectWifi()) {
+        netSyncClock();
+        if (settings.source == SOURCE_PROXY) netProbeExit();
+    } else if (settings.source == SOURCE_PROXY) {
         uiMessage("No network", ("Cannot join " + settings.wifiSsid).c_str(),
                   "Hold BOOT for two seconds to open the setup portal.");
         return;
+    } else {
+        log_w("no wifi: Bluetooth only, no OTA until it joins");
     }
-    netSyncClock();
-    netProbeExit();
-    quotaRefreshAll();
+
+    if (settings.source == SOURCE_PROXY) quotaRefreshAll();
     sensorsRead();
     lastFetch = millis();
     lastClock = millis();
@@ -247,6 +267,20 @@ static void pollSerial() {
 
 void loop() {
     netPollOta();
+
+    switch (linkPoll()) {
+        case LinkEvent::Settings:
+            applySettings();
+            renderFull();
+            break;
+        case LinkEvent::Data:
+            lastFetch = millis();
+            lastClock = millis();
+            renderValues();
+            break;
+        case LinkEvent::None: break;
+    }
+
     pollSerial();
     pollButton(userBtn);
     pollButton(bootBtn);
@@ -254,7 +288,7 @@ void loop() {
     uint32_t now = millis();
     if (now - lastFetch >= (uint32_t)settings.refreshMinutes * 60000UL) {
         fetchAndRender();
-    } else if (uiSupportsPartial() && now - lastClock >= 60000UL) {
+    } else if (uiFastRefreshReady() && now - lastClock >= 60000UL) {
         lastClock = now;
         renderValues();
     }

@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <NimBLEDevice.h>
 #include <WiFi.h>
+#include <sys/time.h>
 
 #include "board.h"
 #include "quota.h"
@@ -96,9 +97,15 @@ static bool applyQuota(const String &payload) {
         return false;
     }
 
-    time_t now = time(nullptr);
     time_t at = doc["at"].as<long long>();
-    if (at < 1760000000 || at > now + 300) at = now;
+    if (at < 1760000000) at = 0;
+    if (at && time(nullptr) < 1760000000) {
+        timeval wall{.tv_sec = at, .tv_usec = 0};
+        settimeofday(&wall, nullptr);
+        log_i("link: clock set from the Mac");
+    }
+    time_t now = time(nullptr);
+    if (!at || at > now + 300) at = now;
 
     bool wake = staleShown || (!claudeState.observedAt && !codexState.observedAt);
     applySide(claudeState, doc["claude"], at, true);

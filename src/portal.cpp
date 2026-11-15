@@ -55,6 +55,16 @@ static String check(const char *name, const char *label, bool on) {
 static void handleRoot() {
     String body = FPSTR(PAGE_HEAD);
 
+    body += "<fieldset><legend>Numbers</legend><label><span>Where the board gets them</span>"
+            "<select name=\"src\">";
+    body += String("<option value=\"0\"") + (settings.source == SOURCE_MAC ? " selected" : "") +
+            ">Agent Meter on the Mac, over Bluetooth</option>";
+    body += String("<option value=\"1\"") + (settings.source == SOURCE_PROXY ? " selected" : "") +
+            ">This board, through the proxy</option>";
+    body += "</select></label><p class=\"note\">Over Bluetooth the board holds no tokens and the Mac pushes "
+            "the numbers it already has. The proxy path is the fallback and needs the tokens below.</p>"
+            "</fieldset>";
+
     body += "<fieldset><legend>Network</legend>";
     body += field("ssid", "Wi-Fi network", settings.wifiSsid);
     body += field("pass", "Wi-Fi password", "", "password",
@@ -63,7 +73,8 @@ static void handleRoot() {
     body += field("phost", "Proxy host", settings.proxyHost);
     body += field("pport", "Port", String(settings.proxyPort), "number");
     body += "</div>";
-    body += "<p class=\"note\">All provider traffic goes through this HTTP CONNECT proxy.</p>";
+    body += "<p class=\"note\">Wi-Fi is always joined, so over-the-air updates keep working. All provider "
+            "traffic on the proxy path goes through this HTTP CONNECT proxy.</p>";
     body += "<div class=\"row\">";
     body += field("tz", "Timezone", settings.tz);
     body += field("every", "Refresh, minutes", String(settings.refreshMinutes), "number");
@@ -125,6 +136,7 @@ static void handleSave() {
     if (arg("pport").length()) settings.proxyPort = arg("pport").toInt();
     if (arg("every").length()) settings.refreshMinutes = arg("every").toInt();
     if (arg("theme").length()) settings.theme = arg("theme").toInt();
+    if (arg("src").length()) settings.source = arg("src").toInt() ? SOURCE_PROXY : SOURCE_MAC;
 
     bool claudeChanged = arg("c_at").length() || arg("c_rt").length();
     keepOrSet(settings.claudeAccess, "c_at");
