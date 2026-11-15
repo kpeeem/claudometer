@@ -4,8 +4,11 @@ Claude and Codex quota on a 4.2" e-paper board on your desk. Opus, Fable and Cod
 one row each, no laptop needed to read it.
 
 Hardware is the [RockBase NM-EPD-420](https://wiki.rockbaseiot.com/docs/products/nm-epd-420/):
-ESP32-S3R8, 400×300 e-paper, two buttons. All provider traffic goes out through an HTTP proxy on
-the LAN, so the board never talks to Anthropic or OpenAI from a Russian IP.
+ESP32-S3R8, 400×300 e-paper, two buttons.
+
+The numbers come from [Agent Meter](https://github.com/kpeeem/agent-meter) over Bluetooth LE. The
+Mac already collects these limits for its menu bar, so it pushes them to the board and the board
+holds no tokens at all. Fetching them on the board, through a proxy, is still there as a fallback.
 
 ![Overview](preview/overview.png)
 
@@ -31,9 +34,13 @@ Plug the board in over USB and flash it:
 ~/.platformio/penv/bin/pio run -e quotaboard -t upload
 ```
 
-The board joins Wi-Fi and shows three empty rows. Hold **BOOT** for two seconds to open the setup
-portal, join the `Quota-Setup` network from your phone or laptop, open `http://192.168.4.1`, paste
-the tokens, press Save. It restarts and starts drawing numbers.
+The board joins Wi-Fi and shows three rows saying `waiting for Mac`. In Agent Meter open
+**Settings → Quota board** and tick *Push the numbers to the quota board over Bluetooth*. Allow
+Bluetooth when macOS asks. The board appears as `quotaboard`, and the next refresh fills the rows.
+
+Everything else about the board — theme, which cards show, redraw interval, timezone — is in that
+same pane, stored on the board. Hold **BOOT** for two seconds for the setup portal, which covers
+Wi-Fi and the fallback as well.
 
 After the first flash you never need the cable again:
 
@@ -56,8 +63,9 @@ number on the right, the Codex row carries its weekly number.
 
 A row turns red at 90% — the bar and a chip behind the number. That is the only thing red means.
 
-The footer shows when the numbers were last fetched, the proxy exit country (`via DE`), optional
-indoor temperature and battery, and page dots when a second page is enabled.
+The footer shows when the numbers were last observed, optional indoor temperature and battery, and
+page dots when a second page is enabled. On the fallback path it also shows the proxy exit country
+(`via DE`).
 
 ### Buttons
 
@@ -74,11 +82,52 @@ indoor temperature and battery, and page dots when a second page is enabled.
 
 ![Portal](preview/portal.png)
 
-Wi-Fi, proxy, timezone, refresh interval, theme, tokens and which cards appear. Tokens are written
-to the board's NVS and never echoed back to the browser — leave a token field blank to keep what is
-already stored.
+Where the numbers come from, Wi-Fi, proxy, timezone, refresh interval, theme, tokens and which
+cards appear. Tokens are written to the board's NVS and never echoed back to the browser — leave a
+token field blank to keep what is already stored.
 
 ## Where the numbers come from
+
+Agent Meter collects Claude and Codex limits for its own menu bar, and pushes that snapshot to the
+board every time it refreshes. The board is a GATT server advertising as `quotaboard`:
+
+| | UUID | |
+|---|---|---|
+| service | `ae4c9350-5442-48a2-8f62-288e8b34fc7c` | |
+| quota | `ae4c9351-5442-48a2-8f62-288e8b34fc7c` | write |
+| settings | `ae4c9352-5442-48a2-8f62-288e8b34fc7c` | read, write, notify |
+
+The quota characteristic is write-only, so numbers cannot be read back off the board. Its payload
+is JSON under 512 bytes, delivered as one ATT long write:
+
+```json
+{"v":1,"at":1763250000,
+ "claude":{"state":"ok","session":[42.4,1763257850],"week":[61,1763570000],
+           "opus":[94.2,1763570000],"sonnet":[37,1763570000],"fable":[58.6,1763570000]},
+ "codex":{"state":"ok","plan":"Pro","session":[7.1,1763262400],"week":[9,1763750000]}}
+```
+
+Every window is `[percent used, reset epoch]`, and a missing key just leaves that row empty.
+`state` is one of `ok`, `stale`, `expired`, `limit`, `err`, `none`, and only reaches the screen when
+a row has no number to show. `at` is when the Mac observed the numbers: it fills the footer stamp,
+and it sets the board's clock when Wi-Fi never came up.
+
+The settings characteristic carries the board's own configuration in both directions — source,
+theme, cards, redraw interval, timezone, plus firmware version and IP to read — so the Settings
+pane in Agent Meter edits exactly what the portal edits. The board notifies on every change, which
+is how the pane follows a reboot or an edit made in the portal.
+
+Pushes do not drive the panel directly. The board keeps the latest snapshot in RAM and repaints on
+its own interval, immediately only for the first snapshot after boot and when numbers come back
+after going `cached` — a 10 s full refresh on every push would leave it redrawing most of the time.
+
+Nothing on this link is paired or encrypted. Anything in Bluetooth range can write a wrong number
+to the panel or change the theme; nothing can read a number back, and there are no tokens to steal.
+
+### Fallback: fetching on the board
+
+Pick *This board, through the proxy* in the portal and the board fetches for itself, which is what
+the tokens are for:
 
 | Provider | Request | Token |
 |---|---|---|
@@ -102,7 +151,10 @@ Two things to know before relying on this:
 
 ## Networking
 
-Everything goes through an HTTP `CONNECT` proxy — the one set in the portal. The board opens a socket to the proxy, issues `CONNECT host:443`,
+Wi-Fi is joined on both paths, because over-the-air updates need it: on the Bluetooth path it is
+only for OTA and NTP, and the board still works with no Wi-Fi at all, taking the time from the Mac.
+
+On the fallback path everything goes through an HTTP `CONNECT` proxy — the one set in the portal. The board opens a socket to the proxy, issues `CONNECT host:443`,
 then runs a full mbedTLS handshake over that socket with certificate-bundle verification. The exit
 country is probed once per cycle and shown in the footer, so a silently broken tunnel is visible
 rather than guessed at.
@@ -163,6 +215,7 @@ theme, `p` next page, `d` dump page, `h` dump help, `s` dump portal.
 | File | |
 |---|---|
 | `src/board.h` | pin map, from the vendor's `config.h` |
+| `src/link.cpp` | BLE GATT server, quota and settings payloads |
 | `src/net.cpp` | Wi-Fi, proxy CONNECT, mbedTLS, OTA, exit probe |
 | `src/quota.cpp` | provider clients, OAuth refresh, response parsing |
 | `src/ui.cpp` | themes, layout, dither, screens, preview dump |
@@ -172,5 +225,7 @@ theme, `p` next page, `d` dump page, `h` dump help, `s` dump portal.
 ## Secrets
 
 `src/secrets.h` is generated from the login keychain and is gitignored; `src/secrets.h.example`
-shows its shape. Provider tokens are never in the repo or in the build — they only ever reach the
-board through the setup portal.
+shows its shape. It holds the Wi-Fi and OTA passwords, nothing else.
+
+On the Bluetooth path the board stores no provider tokens whatsoever. They exist only for the
+fallback, reach the board only through the setup portal, and are never in the repo or the build.
