@@ -1,0 +1,5 @@
+.pio/
+.vscode/
+vendor-ref/
+src/secrets.h
+.DS_Store
