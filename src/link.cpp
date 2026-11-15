@@ -203,15 +203,17 @@ void linkStart() {
     configChar->setCallbacks(&writeSink);
     service->start();
 
+    NimBLEAdvertisementData scanResponse;
+    scanResponse.setName("quotaboard");
+
     NimBLEAdvertising *advertising = NimBLEDevice::getAdvertising();
-    advertising->setName("quotaboard");
     advertising->addServiceUUID(SERVICE_UUID);
+    advertising->setScanResponseData(scanResponse);
     advertising->enableScanResponse(true);
-    NimBLEDevice::startAdvertising();
 
     started = true;
     publish();
-    log_i("link: advertising as quotaboard");
+    log_i("link: advertising as quotaboard: %s", NimBLEDevice::startAdvertising() ? "up" : "failed");
 }
 
 LinkEvent linkPoll() {
