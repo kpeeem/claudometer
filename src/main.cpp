@@ -288,7 +288,7 @@ void loop() {
     uint32_t now = millis();
     if (now - lastFetch >= (uint32_t)settings.refreshMinutes * 60000UL) {
         fetchAndRender();
-    } else if (uiFastRefreshReady() && now - lastClock >= 60000UL) {
+    } else if (uiSupportsPartial() && now - lastClock >= 60000UL) {
         lastClock = now;
         renderValues();
     }

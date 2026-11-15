@@ -17,6 +17,7 @@ static GxEPD2_BW<GxEPD2_420_GYE042A87, GxEPD2_420_GYE042A87::HEIGHT> display(
     GxEPD2_420_GYE042A87(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY));
 #endif
 
+#include "link.h"
 #include "net.h"
 #include "quota.h"
 #include "sensors.h"
@@ -345,11 +346,13 @@ static void drawHelp(Adafruit_GFX &g) {
     String net = WiFi.status() == WL_CONNECTED
                      ? WiFi.SSID() + "   " + WiFi.localIP().toString() + "   " + String(WiFi.RSSI()) + " dBm"
                      : String("not connected");
-    String proxy = settings.proxyHost + ":" + String(settings.proxyPort);
-    if (netExitLabel().length()) proxy += "   " + netExitLabel();
+    String numbers = settings.proxyHost + ":" + String(settings.proxyPort);
+    if (netExitLabel().length()) numbers += "   " + netExitLabel();
+    if (settings.source == SOURCE_MAC)
+        numbers = linkConnected() ? "Agent Meter connected" : "waiting for Agent Meter";
 
     helpLine(g, 172, "WI-FI", "", net.c_str());
-    helpLine(g, 190, "PROXY", "", proxy.c_str());
+    helpLine(g, 190, settings.source == SOURCE_MAC ? "MAC" : "PROXY", "", numbers.c_str());
     helpLine(g, 208, "EVERY", "", (String(settings.refreshMinutes) + " min   theme " + uiThemeName(settings.theme)).c_str());
     helpLine(g, 226, "BOARD", "", (String(BOARD_NAME) + "   firmware " + FW_VERSION + "   ota quotaboard.local").c_str());
 
@@ -365,8 +368,8 @@ static void drawPortal(Adafruit_GFX &g, const char *ssid, const char *ip) {
     g.fillRect(L::MARGIN, 96, 3, 42, theme.accent);
     text(L::MARGIN + 16, 114, F_STRONG, String("Wi-Fi   ") + ssid);
     text(L::MARGIN + 16, 136, F_STRONG, String("Open    http://") + ip);
-    text(L::MARGIN, 176, F_META, "Paste the Claude and Codex tokens, pick the cards,");
-    text(L::MARGIN, 192, F_META, "then press Save. The board restarts on its own.");
+    text(L::MARGIN, 176, F_META, "Choose where the numbers come from, the cards and");
+    text(L::MARGIN, 192, F_META, "the theme, then press Save. The board restarts.");
     text(L::MARGIN, 216, F_META, "Hold BOOT for two seconds to leave without saving.");
     dither(g, L::MARGIN, L::FOOTER_RULE, L::CONTENT, 1, 6);
     text(L::MARGIN, L::FOOTER_BASE, F_META, BOARD_NAME);
