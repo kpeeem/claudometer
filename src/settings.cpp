@@ -17,6 +17,7 @@ void Settings::load() {
     refreshMinutes = store.getUShort("every", 20);
     tz = store.getString("tz", "MSK-3");
     theme = store.getUChar("theme", 0);
+    source = store.getUChar("src", SOURCE_MAC);
 
     claudeAccess = store.getString("c_at", "");
     claudeRefresh = store.getString("c_rt", "");
@@ -39,6 +40,7 @@ void Settings::load() {
     if (refreshMinutes < 5) refreshMinutes = 5;
     if (refreshMinutes > 240) refreshMinutes = 240;
     if (theme > 2) theme = 0;
+    if (source > SOURCE_PROXY) source = SOURCE_MAC;
 }
 
 void Settings::save() {
@@ -50,6 +52,7 @@ void Settings::save() {
     store.putUShort("every", refreshMinutes);
     store.putString("tz", tz);
     store.putUChar("theme", theme);
+    store.putUChar("src", source);
     store.putBool("k_op", cardOpus);
     store.putBool("k_fa", cardFable);
     store.putBool("k_cx", cardCodex);

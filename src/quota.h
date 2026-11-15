@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <time.h>
 
-enum class Health { NoToken, Ready, Stale, Expired, Throttled, NetError, BadData };
+enum class Health { NoToken, Ready, Stale, Expired, Throttled, NetError, BadData, Waiting };
 
 struct Window {
     bool valid = false;

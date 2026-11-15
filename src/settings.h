@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+enum : uint8_t { SOURCE_MAC = 0, SOURCE_PROXY = 1 };
+
 struct Settings {
     String wifiSsid;
     String wifiPass;
@@ -10,6 +12,7 @@ struct Settings {
     uint16_t refreshMinutes;
     String tz;
     uint8_t theme;
+    uint8_t source;
 
     String claudeAccess;
     String claudeRefresh;

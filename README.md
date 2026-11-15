@@ -114,13 +114,19 @@ so on a failed join the board rescans and matches the SSID case-insensitively.
 
 | Env | Panel | Refresh |
 |---|---|---|
-| `quotaboard` | tri-colour GDEY042Z98 | full only, ~25 s |
-| `quotaboard-bw` | black/white GYE042A87 | fast partial, ~0.4 s |
+| `quotaboard` | tri-colour GDEY042Z98 | ~10 s full |
+| `quotaboard-bw` | black/white GYE042A87 | ~0.4 s partial |
 | `quotaboard-ota` | same as `quotaboard`, uploads over the air | |
 
-The two panels are visually identical from the outside and share a controller. If the display never
-shows red, build `quotaboard-bw` — the same UI draws red as black and the per-minute clock update
-switches on.
+This board has the **tri-colour GDEY042Z98**. The two panels look identical from the outside and
+share an SSD1683-class controller, so the way to tell them apart is refresh timing rather than
+markings: with `CORE_DEBUG_LEVEL=3` the driver prints how long it waited on BUSY, and this panel
+reports `_Update_Fast : ~9960000` µs. A GYE042A87 completes its waveform in about 1.2 s and cannot
+hold BUSY for ten seconds, so a ~10 s wait is positive identification of the tri-colour panel.
+
+That costs ~10 s per redraw, which is why the per-minute clock update is off on this build. The
+driver does expose `refresh_bw(x, y, w, h)` — a black/white differential update at ~1.5 s that
+leaves the red plane alone — which is not wired up yet.
 
 ## Design on 1-bit
 

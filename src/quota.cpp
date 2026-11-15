@@ -21,6 +21,7 @@ const char *healthText(Health health) {
         case Health::Throttled: return "rate limited";
         case Health::NetError: return "no data";
         case Health::BadData: return "bad reply";
+        case Health::Waiting: return "waiting for Mac";
     }
     return "";
 }
@@ -272,6 +273,11 @@ static void refreshCodex() {
 }
 
 void quotaInit() {
+    if (settings.source == SOURCE_MAC) {
+        claudeState.health = Health::Waiting;
+        codexState.health = Health::Waiting;
+        return;
+    }
     claudeState.health = settings.claudeAccess.length() ? Health::NetError : Health::NoToken;
     codexState.health = settings.codexAccess.length() ? Health::NetError : Health::NoToken;
 }
