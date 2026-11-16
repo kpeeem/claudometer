@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -euo pipefail
 
-here="${0:a:h}"
+here="$(cd -- "$(dirname -- "$0")" && pwd)"
 env_name="${1:-quotaboard-ota}"
 host="${OTA_HOST:-quotaboard.local}"
 
