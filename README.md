@@ -72,6 +72,11 @@ number on the right, the Codex row carries its weekly number.
 
 A row turns red at 90% — the bar and a chip behind the number. That is the only thing red means.
 
+The header carries what your agents are doing right now: `working`, `done`, `failed`, or a dot and
+`needs you` when a session is waiting on an answer or an approval, with the project beside it. The
+panel repaints out of band for `needs you`, `done` and `failed` — at most once every two minutes,
+since a redraw costs ten seconds — and otherwise waits for its own interval.
+
 The footer shows when the numbers were last observed, optional indoor temperature and battery, and
 page dots when a second page is enabled. On the fallback path it also shows the proxy exit country
 (`via DE`).
@@ -113,7 +118,8 @@ is JSON under 512 bytes, delivered as one ATT long write:
 {"v":1,"at":1763250000,
  "claude":{"state":"ok","session":[42.4,1763257850],"week":[61,1763570000],
            "opus":[94.2,1763570000],"sonnet":[37,1763570000],"fable":[58.6,1763570000]},
- "codex":{"state":"ok","plan":"Pro","session":[7.1,1763262400],"week":[9,1763750000]}}
+ "codex":{"state":"ok","plan":"Pro","session":[7.1,1763262400],"week":[9,1763750000]},
+ "agent":{"state":"waiting","project":"NM-EPD-420","count":1}}
 ```
 
 Every window is `[percent used, reset epoch]`, and a missing key just leaves that row empty.
@@ -125,6 +131,11 @@ The settings characteristic carries the board's own configuration in both direct
 theme, cards, redraw interval, timezone, plus firmware version and IP to read — so the Settings
 pane in Agent Meter edits exactly what the portal edits. The board notifies on every change, which
 is how the pane follows a reboot or an edit made in the portal.
+
+`agent` is what the sessions on the Mac are doing, from the hooks Agent Meter already installs:
+`working`, `waiting` when one wants an answer or an approval, `done`, `failed`. It draws in the
+header next to the wordmark, with a dot in front of `needs you`. The key is optional — without the
+hooks the header just stays empty.
 
 Pushes do not drive the panel directly. The board keeps the latest snapshot in RAM and repaints on
 its own interval, immediately only for the first snapshot after boot and when numbers come back

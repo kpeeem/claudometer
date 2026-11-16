@@ -14,6 +14,8 @@ static const char *QUOTA_UUID = "ae4c9351-5442-48a2-8f62-288e8b34fc7c";
 static const char *CONFIG_UUID = "ae4c9352-5442-48a2-8f62-288e8b34fc7c";
 static const uint8_t PROTOCOL = 1;
 
+Agent agentState;
+
 static NimBLECharacteristic *configChar = nullptr;
 static SemaphoreHandle_t lock = nullptr;
 static String pendingQuota;
@@ -84,6 +86,19 @@ static void applySide(Provider &state, JsonObjectConst node, time_t at, bool cla
     if (state.hasData()) state.observedAt = at;
 }
 
+static bool applyAgent(JsonObjectConst node) {
+    String was = agentState.state;
+    if (node.isNull()) {
+        agentState = Agent{};
+    } else {
+        agentState.state = node["state"].is<const char *>() ? node["state"].as<const char *>() : "";
+        agentState.project = node["project"].is<const char *>() ? node["project"].as<const char *>() : "";
+        agentState.count = node["count"] | 0;
+    }
+    if (agentState.state == was) return false;
+    return agentState.state == "waiting" || agentState.state == "done" || agentState.state == "failed";
+}
+
 static bool applyQuota(const String &payload) {
     if (settings.source != SOURCE_MAC) return false;
 
@@ -111,6 +126,12 @@ static bool applyQuota(const String &payload) {
     applySide(claudeState, doc["claude"], at, true);
     applySide(codexState, doc["codex"], at, false);
     staleShown = false;
+
+    static uint32_t lastAgentWake = 0;
+    if (applyAgent(doc["agent"]) && (!lastAgentWake || millis() - lastAgentWake > 120000UL)) {
+        lastAgentWake = millis();
+        wake = true;
+    }
     log_i("link: quota in, claude=%s codex=%s", healthText(claudeState.health), healthText(codexState.health));
     return wake;
 }

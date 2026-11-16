@@ -278,9 +278,39 @@ static String footerText() {
     return stamp;
 }
 
+static const char *WORDMARK = "Клодометр";
+
 static void headerChrome(Adafruit_GFX &g) {
-    text(L::MARGIN, L::HEADER_BASE, F_WORDMARK, "Клодометр");
+    text(L::MARGIN, L::HEADER_BASE, F_WORDMARK, WORDMARK);
     g.drawFastHLine(L::MARGIN, L::HEADER_RULE, L::CONTENT, theme.accent);
+}
+
+static String agentText() {
+    if (agentState.state == "waiting") return "needs you";
+    if (agentState.state == "working")
+        return agentState.count > 1 ? String(agentState.count) + " working" : "working";
+    if (agentState.state == "done") return "done";
+    if (agentState.state == "failed") return "failed";
+    return "";
+}
+
+static void drawAgent(Adafruit_GFX &g, int16_t left, int16_t right) {
+    String label = agentText();
+    if (!label.length()) return;
+
+    bool attention = agentState.state == "waiting";
+    const uint8_t *font = attention ? F_STRONG : F_META;
+    int16_t x = left;
+    if (attention) {
+        g.fillCircle(x + 3, L::HEADER_BASE - 4, 3, theme.ink);
+        x += 11;
+    }
+    if (agentState.project.length()) {
+        String full = label + "  " + agentState.project;
+        if (x + width(font, full) <= right) label = full;
+    }
+    if (x + width(font, label) > right) return;
+    text(x, L::HEADER_BASE, font, label);
 }
 
 static void headerValues(Adafruit_GFX &g) {
@@ -297,6 +327,7 @@ static void headerValues(Adafruit_GFX &g) {
         else
             dither(g, x + i * 3, L::HEADER_BASE - h, 2, h, 5);
     }
+    drawAgent(g, L::MARGIN + width(F_WORDMARK, WORDMARK) + 14, x - 10);
 }
 
 static uint8_t visiblePages() { return settings.cardClaudeDetail ? 2 : 1; }
