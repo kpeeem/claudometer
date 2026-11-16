@@ -76,6 +76,7 @@ constexpr float ALERT_AT = 90.0f;
 
 #define F_HERO u8g2_font_logisoso30_tn
 #define F_NAME u8g2_font_helvB14_tr
+#define F_WORDMARK u8g2_font_10x20_t_cyrillic
 #define F_STRONG u8g2_font_helvB10_tr
 #define F_LABEL u8g2_font_helvB08_tr
 #define F_META u8g2_font_helvR08_tr
@@ -278,7 +279,7 @@ static String footerText() {
 }
 
 static void headerChrome(Adafruit_GFX &g) {
-    text(L::MARGIN, L::HEADER_BASE, F_NAME, "Quota");
+    text(L::MARGIN, L::HEADER_BASE, F_WORDMARK, "Клодометр");
     g.drawFastHLine(L::MARGIN, L::HEADER_RULE, L::CONTENT, theme.accent);
 }
 
@@ -376,11 +377,17 @@ static void drawPortal(Adafruit_GFX &g, const char *ssid, const char *ip) {
     textRight(L::RIGHT, L::FOOTER_BASE, F_META, "setup mode");
 }
 
+static void serviceWhileBusy(const void *) {
+    netPollOta();
+    delay(1);
+}
+
 void uiInit() {
     SPI.end();
     SPI.begin(PIN_EPD_SCK, PIN_EPD_MISO, PIN_EPD_MOSI, PIN_EPD_CS);
     display.init(115200, true, 2, false);
     display.setRotation(0);
+    display.epd2.setBusyCallback(serviceWhileBusy);
     display.setFullWindow();
     bindType(display);
 }
