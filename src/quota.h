@@ -9,6 +9,7 @@ struct Window {
     bool valid = false;
     float used = 0;
     time_t resetAt = 0;
+    uint32_t age = 0;
 };
 
 struct Provider {

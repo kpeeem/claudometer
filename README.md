@@ -48,7 +48,7 @@ After the first flash you never need the cable again:
 ./scripts/ota.sh
 ```
 
-Three things make or break that, all learned the hard way:
+Two things make or break that, both learned the hard way:
 
 - The partition table must have **two** app slots. `huge_app.csv` has only `app0`, so there is
   nowhere to write an incoming image and the board calls `abort()` a moment after the transfer
@@ -56,14 +56,6 @@ Three things make or break that, all learned the hard way:
   6.5 MB slots on the board's 16 MB flash. Changing the partition table needs one USB flash.
 - The Mac firewall must let the uploader accept the inbound connection the board makes back to it.
   Symptoms otherwise are `No response from device`, or `Authenticating...OK` followed by a stall.
-- PlatformIO's bundled esptool needs `click` older than 8.2, even though the upload itself never
-  touches esptool: the build still generates `bootloader.bin`, and against a newer click that dies
-  with `ParamType.get_metavar() missing 1 required positional argument`. Pin it inside PlatformIO's
-  own virtualenv, which is what `platformio` 6.2 wants anyway:
-
-  ```bash
-  ~/.platformio/penv/bin/python -m pip install 'click<8.2'
-  ```
 
 ## What is on screen
 
@@ -77,6 +69,12 @@ Three things make or break that, all learned the hard way:
 Each row is one quota window: the big number and the bar are the window you care about, the line
 underneath says which window it is and when it resets. The Opus row carries the 5-hour session
 number on the right, the Codex row carries its weekly number.
+
+Per-model numbers only exist while Claude's automatic collection is working, so the first row falls
+back to the all-models 7-day window and relabels itself `Claude · all models` rather than going
+blank. A row whose reading is over an hour old, or whose window has already reset since it was
+read, says `cached` where it would otherwise count down — a stale number stays on screen, but it
+stops pretending to be current.
 
 A row turns red at 90% — the bar and a chip behind the number. That is the only thing red means.
 
@@ -125,15 +123,22 @@ is JSON under 512 bytes, delivered as one ATT long write:
 ```json
 {"v":1,"at":1763250000,
  "claude":{"state":"ok","session":[42.4,1763257850],"week":[61,1763570000],
-           "opus":[94.2,1763570000],"sonnet":[37,1763570000],"fable":[58.6,1763570000]},
+           "opus":[94.2,1763570000],"sonnet":[37,1763570000],"fable":[58.6,1763570000,14400]},
  "codex":{"state":"ok","plan":"Pro","session":[7.1,1763262400],"week":[9,1763750000]},
  "agent":{"state":"waiting","project":"NM-EPD-420","count":1}}
 ```
 
-Every window is `[percent used, reset epoch]`, and a missing key just leaves that row empty.
+Every window is `[percent used, reset epoch]`, and a missing key just leaves that row empty. A third
+element is added when the reading is more than a minute old — how many seconds before this push the
+Mac actually read that number, which is how the panel can say `cached` for one row while the rest
+are current. The Mac collects the windows from several sources with different ages, so this is per
+window rather than per provider.
+
 `state` is one of `ok`, `stale`, `expired`, `limit`, `err`, `none`, and only reaches the screen when
-a row has no number to show. `at` is when the Mac observed the numbers: it fills the footer stamp,
-and it sets the board's clock when Wi-Fi never came up.
+a row has no number to show at all. It describes the numbers in the payload, not the Mac's last
+collection attempt: a collector that times out while the app still has usable numbers from another
+source is not `stale`. `at` is when the Mac pushed: it fills the footer stamp, and it sets the
+board's clock when Wi-Fi never came up.
 
 The settings characteristic carries the board's own configuration in both directions — source,
 theme, cards, redraw interval, timezone, plus firmware version and IP to read — so the Settings
@@ -197,6 +202,12 @@ so on a failed join the board rescans and matches the SSID case-insensitively.
 | `quotaboard` | tri-colour GDEY042Z98 | ~10 s full |
 | `quotaboard-bw` | black/white GYE042A87 | ~0.4 s partial |
 | `quotaboard-ota` | same as `quotaboard`, uploads over the air | |
+
+The pinned pioarduino release has to match whatever else on the machine builds for ESP32, because
+every project shares `~/.platformio`. Two different pins make each build reinstall the other's two
+gigabytes of packages, and they swap the shared `esptool`/`click` pair underneath each other until
+one of them dies on `ParamType.get_metavar() missing 1 required positional argument`. Keep this
+project on the same release as the neighbours rather than pinning an older one.
 
 This board has the **tri-colour GDEY042Z98**. The two panels look identical from the outside and
 share an SSD1683-class controller, so the way to tell them apart is refresh timing rather than

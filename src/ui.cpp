@@ -202,6 +202,12 @@ struct Row {
     Health health;
 };
 
+static bool staleReading(const Window &window) {
+    if (window.age >= 3600) return true;
+    time_t now = time(nullptr);
+    return window.resetAt && now >= 1760000000 && window.resetAt <= now;
+}
+
 static void drawRow(Adafruit_GFX &g, int16_t y, const Row &row) {
     text(L::MARGIN, y + L::HERO_BASE, F_NAME, row.title);
     if (row.badge && *row.badge)
@@ -219,11 +225,11 @@ static void drawRow(Adafruit_GFX &g, int16_t y, const Row &row) {
     bar(g, y + L::BAR_Y, row.window->used, alert);
 
     text(L::MARGIN, y + L::META_BASE, F_META, row.label);
-    String reset = relativeTime(row.window->resetAt);
-    if (reset.length()) {
+    String caption = staleReading(*row.window) ? "cached" : relativeTime(row.window->resetAt);
+    if (caption.length()) {
         int16_t dotX = L::MARGIN + width(F_META, row.label) + 6;
         g.fillRect(dotX, y + L::META_BASE - 3, 2, 2, theme.ink);
-        text(dotX + 8, y + L::META_BASE, F_META, reset);
+        text(dotX + 8, y + L::META_BASE, F_META, caption);
     }
     if (row.secondary && row.secondary->valid)
         textRight(L::RIGHT, y + L::META_BASE, F_LABEL,
@@ -238,9 +244,16 @@ static uint8_t pageRows(Page page, Row rows[3]) {
         rows[count++] = {"Sonnet", "week", "7 days", &claudeState.sonnet, nullptr, "", claudeState.health};
         return count;
     }
-    if (settings.cardOpus)
-        rows[count++] = {"Opus",        "week",       "7 days", &claudeState.opus,
-                         &claudeState.opusSession, "5h",     claudeState.health};
+    if (settings.cardOpus) {
+        bool byModel = claudeState.opus.valid;
+        rows[count++] = {byModel ? "Opus" : "Claude",
+                         byModel ? "week" : "all models",
+                         "7 days",
+                         byModel ? &claudeState.opus : &claudeState.week,
+                         &claudeState.opusSession,
+                         "5h",
+                         claudeState.health};
+    }
     if (settings.cardFable && count < 3)
         rows[count++] = {"Fable", "week", "7 days", &claudeState.fable, nullptr, "", claudeState.health};
     if (settings.cardCodex && count < 3)

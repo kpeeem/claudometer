@@ -56,6 +56,7 @@ static Window readWindow(JsonArrayConst node) {
     if (!isfinite(used)) return out;
     out.used = constrain(used, 0.0f, 100.0f);
     if (node.size() > 1) out.resetAt = (time_t)node[1].as<long long>();
+    if (node.size() > 2) out.age = (uint32_t)constrain(node[2].as<long long>(), 0LL, 2592000LL);
     out.valid = true;
     return out;
 }
