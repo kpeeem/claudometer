@@ -28,6 +28,7 @@ void Settings::load() {
     codexAccount = store.getString("x_acc", "");
     codexExpiry = store.getUInt("x_exp", 0);
 
+    cardSession = store.getBool("k_s5", true);
     cardOpus = store.getBool("k_op", true);
     cardFable = store.getBool("k_fa", true);
     cardCodex = store.getBool("k_cx", true);
@@ -53,6 +54,7 @@ void Settings::save() {
     store.putString("tz", tz);
     store.putUChar("theme", theme);
     store.putUChar("src", source);
+    store.putBool("k_s5", cardSession);
     store.putBool("k_op", cardOpus);
     store.putBool("k_fa", cardFable);
     store.putBool("k_cx", cardCodex);

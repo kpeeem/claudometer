@@ -1,7 +1,7 @@
 # Quota board
 
-Claude and Codex quota on a 4.2" e-paper board on your desk. Opus, Fable and Codex by default,
-one row each, no laptop needed to read it.
+Claude and Codex quota on a 4.2" e-paper board on your desk. Claude's 5-hour window, its week,
+Fable and Codex by default, one bar each, no laptop needed to read it.
 
 Hardware is the [RockBase NM-EPD-420](https://wiki.rockbaseiot.com/docs/products/nm-epd-420/):
 ESP32-S3R8, 400×300 e-paper, two buttons.
@@ -67,11 +67,14 @@ Two things make or break that, both learned the hard way:
 | ![Mono](preview/theme-mono.png) | ![Detail](preview/detail.png) |
 
 Each row is one quota window: the big number and the bar are the window you care about, the line
-underneath says which window it is and when it resets. The Opus row carries the 5-hour session
-number on the right, the Codex row carries its weekly number.
+underneath says which window it is and when it resets. By default there are four — Claude's 5-hour
+session, the weekly window, Fable, and Codex — and the Codex row carries its weekly number on the
+right. Switch any of them off in Agent Meter or the portal; at three rows or fewer the panel uses a
+taller row and a bigger number, and with the 5-hour row off the weekly row carries that number
+inline instead. Four is the limit of this type scale.
 
-Per-model numbers only exist while Claude's automatic collection is working, so the first row falls
-back to the all-models 7-day window and relabels itself `Claude · all models` rather than going
+Per-model numbers only exist while Claude's automatic collection is working, so the weekly row
+falls back to the all-models window and relabels itself `Claude · all models` rather than going
 blank. A row whose reading is over an hour old, or whose window has already reset since it was
 read, says `cached` where it would otherwise count down — a stale number stays on screen, but it
 stops pretending to be current.

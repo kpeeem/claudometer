@@ -154,6 +154,7 @@ static bool applyConfig(const String &payload) {
 
     JsonObjectConst cards = doc["cards"];
     if (!cards.isNull()) {
+        if (cards["session"].is<bool>()) settings.cardSession = cards["session"];
         if (cards["opus"].is<bool>()) settings.cardOpus = cards["opus"];
         if (cards["fable"].is<bool>()) settings.cardFable = cards["fable"];
         if (cards["codex"].is<bool>()) settings.cardCodex = cards["codex"];
@@ -181,6 +182,7 @@ static void publish() {
     doc["every"] = settings.refreshMinutes;
     doc["tz"] = settings.tz;
     JsonObject cards = doc["cards"].to<JsonObject>();
+    cards["session"] = settings.cardSession;
     cards["opus"] = settings.cardOpus;
     cards["fable"] = settings.cardFable;
     cards["codex"] = settings.cardCodex;

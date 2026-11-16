@@ -104,6 +104,7 @@ static void handleRoot() {
             "Mono drops the red.</p></fieldset>";
 
     body += "<fieldset><legend>Cards</legend><p class=\"note\" style=\"margin:0 0 .9rem\">The first page shows up to three rows, in this order.</p>";
+    body += check("k_s5", "Claude 5-hour session", settings.cardSession);
     body += check("k_op", "Opus weekly", settings.cardOpus);
     body += check("k_fa", "Fable weekly", settings.cardFable);
     body += check("k_cx", "Codex session", settings.cardCodex);
@@ -155,6 +156,7 @@ static void handleSave() {
         settings.saveCodexTokens();
     }
 
+    settings.cardSession = server.hasArg("k_s5");
     settings.cardOpus = server.hasArg("k_op");
     settings.cardFable = server.hasArg("k_fa");
     settings.cardCodex = server.hasArg("k_cx");

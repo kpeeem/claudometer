@@ -23,6 +23,7 @@ struct Settings {
     String codexAccount;
     uint32_t codexExpiry;
 
+    bool cardSession;
     bool cardOpus;
     bool cardFable;
     bool cardCodex;
