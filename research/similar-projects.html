@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Квота-борд: что уже есть рядом и что стоит взять</title>
+<style>
+  :root {
+    --ink: #1c1c1a;
+    --muted: #61615b;
+    --line: #dcdcd5;
+    --soft: #f5f5f1;
+    --link: #1f5fa8;
+    --warn: #a9481f;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: #fff;
+    color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  }
+  main { max-width: 1120px; margin: 0 auto; padding: 40px 24px 96px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 22px; margin: 56px 0 14px; padding-top: 22px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 30px 0 8px; }
+  p { margin: 0 0 12px; }
+  a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  code { font: 12.5px/1.4 ui-monospace, "SF Mono", Menlo, monospace; background: var(--soft); padding: 1px 5px; border-radius: 3px; }
+  .meta { color: var(--muted); font-size: 13.5px; margin-bottom: 26px; }
+  .lead { font-size: 16.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin: 0 0 6px; }
+  .toc { columns: 2; column-gap: 40px; margin: 18px 0 0; padding: 0; list-style: none; }
+  .toc li { break-inside: avoid; margin-bottom: 5px; }
+  .toc .sub { padding-left: 16px; font-size: 13.5px; color: var(--muted); }
+  .box { background: var(--soft); border-left: 3px solid #b9b9b0; padding: 12px 16px; margin: 16px 0; }
+  .box p:last-child, .box ul:last-child { margin-bottom: 0; }
+  .box.warn { border-left-color: var(--warn); }
+  .box.key { border-left-color: var(--ink); }
+  .tw { overflow-x: auto; margin: 12px 0 20px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; line-height: 1.5; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-weight: 600; white-space: nowrap; }
+  td.n, th.n { text-align: center; white-space: nowrap; }
+  td ul { margin: 4px 0 0; padding-left: 16px; }
+  td li { margin: 0 0 3px; }
+  .tag { display: inline-block; border: 1px solid #c4c4bc; border-radius: 3px; padding: 0 5px; font-size: 11px; line-height: 17px; color: var(--muted); white-space: nowrap; vertical-align: 1px; }
+  .tag.dark { border-color: var(--ink); color: var(--ink); }
+  .tag.red { border-color: var(--warn); color: var(--warn); }
+  .small { font-size: 12.5px; color: var(--muted); }
+  .proj { font-weight: 600; }
+  figure { margin: 18px 0 24px; }
+  figcaption { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+  svg text { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; fill: #1c1c1a; }
+  @media (max-width: 760px) { .toc { columns: 1; } h1 { font-size: 25px; } }
+  @media print { a { color: inherit; } h2 { break-after: avoid; } tr { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Квота-борд: что уже есть рядом и что стоит взять</h1>
+<p class="meta">Данные собраны 15 ноября 2026. Звёзды и лицензии сняты через GitHub API в тот же день. Код платы смотрел на коммите <code>4a3905a</code>. Исходный код репозитория не менялся. В таблицах ссылка стоит рядом с утверждением, которое она подтверждает.</p>
+
+<p class="lead">Вы уточнили, что важна сама функция: монитор и «бадди», с помощью которого можно следить, на любом дисплее, а не только e-ink и не только на вашей плате. Поэтому сравниваются <b>функции слежения</b>. Всё, что подсмотрено на LCD, AMOLED, в меню-баре или в Home Assistant, оценено по двум осям: сколько стоит добавить и как ложится на 400×300.</p>
+
+<h2 id="tldr" style="margin-top:34px">Коротко</h2>
+<ol>
+  <li><b>Точного аналога нет.</b> Ближайший — <a href="https://github.com/SDanker/iauso">iauso</a>: Claude и Codex на e-paper, но это Raspberry Pi с панелью 296×160, и автор сам пишет, что на реальных аккаунтах не проверял. Есть целое семейство «Claude на 200×200 e-paper по BLE». Квоты на 4.2″/400×300 я не нашёл ни у кого. На NM-EPD-420 и CrowPanel 4.2″ есть только погода, часы, читалки и LoRa.</li>
+  <li><b>Мы расходимся с остальными в одном месте.</b> В режиме прокси плата сама хранит токены и сама ротирует refresh-токены, а почти все остальные держат учётку на хосте и шлют на экран только числа. Режим «Mac по BLE», который уже в дереве (коммит <code>4a3905a</code>), как раз такой же, как у большинства. Корень проблем с 429 и протуханием токенов — режим прокси.</li>
+  <li><b>Ваши строки Opus и Fable — это окна по моделям.</b> Их нет ни в заголовках <code>anthropic-ratelimit-unified-*</code>, ни в statusLine. Они точно есть в <code>/api/oauth/usage</code> и в выводе <code>/usage</code>; есть ли они в кеше Claude Desktop, я не выяснил. Поэтому «слезть с эндпойнта» можно только для session и week, а не для моделей.</li>
+  <li><b>Бюджет 429 на эндпойнте, судя по измерениям, общий на аккаунт.</b> Ваши 20 минут — самый консервативный интервал в выборке. Если 429 всё равно приходят, виноват, скорее всего, соседний опрос с того же аккаунта: Agent Meter, CodexBar, виджет статуса. Это довод за один опрашивающий клиент на Mac, и он у вас уже заложен в режиме Mac по BLE.</li>
+  <li><b>Самая большая функциональная дыра — статус агента:</b> «работает / ждёт вас / готово». Его делают nsyll на 1.54″ e-ink, Codenotch и AI Monitor. Он строится на хуках Claude Code, которые есть в официальной документации. В BLE-протоколе версии 1 пока только квоты и настройки, для статуса нужна отдельная характеристика. На вашей плате ещё и стоит динамик с кодеком ES8311, то есть сигнал «ждёт вас» можно сделать звуковым.</li>
+  <li><b>Юридически:</b> личный инструмент для своей подписки — серая зона, а не разрешённый сценарий. Единственный путь, который Anthropic документирует сам, — поле <code>rate_limits</code> в statusLine. Подробности в разделе 6.4.</li>
+</ol>
+
+<h3>Быстрые победы</h3>
+<p>Это не требует нового железа: отложенный backoff на 429 (в режиме прокси на плате, в режиме Mac — в Agent Meter), выбор окон Codex по длительности, маркер «темпа» на полосе, пропуск перерисовки без изменений, внеплановый запрос в момент сброса окна. Полный ранжированный список — в разделе 6.2.</p>
+
+<nav aria-label="Оглавление">
+<ul class="toc">
+  <li><a href="#map">2. Карта проектов</a></li>
+  <li class="sub"><a href="#epaper">2.1 E-paper и ESP32-дисплеи с квотами</a></li>
+  <li class="sub"><a href="#otherdisp">2.2 Бадди на других экранах</a></li>
+  <li class="sub"><a href="#desktop">2.3 Десктоп, Home Assistant, TRMNL</a></li>
+  <li class="sub"><a href="#board">2.4 NM-EPD-420 и CrowPanel 4.2″</a></li>
+  <li><a href="#data">3. Откуда берут данные</a></li>
+  <li class="sub"><a href="#topology">3.1 Где живёт токен</a></li>
+  <li class="sub"><a href="#claude-src">3.2 Источники для Claude</a></li>
+  <li class="sub"><a href="#codex-src">3.3 Источники для Codex</a></li>
+  <li><a href="#buddy">4. Функции слежения («бадди»)</a></li>
+  <li class="sub"><a href="#state">4.1 Статус агента по хукам</a></li>
+  <li class="sub"><a href="#catalog">4.2 Каталог функций</a></li>
+  <li><a href="#render">5. Рендер и железо</a></li>
+  <li><a href="#synthesis">6. Выводы</a></li>
+  <li class="sub"><a href="#same">6.1 Делает ли кто-то то же самое</a></li>
+  <li class="sub"><a href="#ranked">6.2 Что добавить, по порядку</a></li>
+  <li class="sub"><a href="#ratelimit">6.3 Лимиты и токены: кто решил лучше</a></li>
+  <li class="sub"><a href="#tos">6.4 Лицензии и условия использования</a></li>
+  <li><a href="#gaps">7. Что не проверено</a></li>
+</ul>
+</nav>
+
+<!-- ============================================================ 2 -->
+<h2 id="map">2. Карта проектов</h2>
+<p>Метки: <span class="tag dark">прочитано</span> — открывал README или документ; <span class="tag">сводка поиска</span> — факт взят из результатов поиска или обсуждения, источник целиком не открывал. Если у проекта в README нет ответа на мой вопрос (например, про 429), так и написано.</p>
+
+<h3 id="epaper">2.1 E-paper и ESP32-дисплеи с квотами</h3>
+<div class="tw"><table>
+<thead><tr><th>Проект</th><th>Железо и рендер</th><th>Откуда данные</th><th>429 и токены</th><th>Что есть у них и нет у нас</th></tr></thead>
+<tbody>
+<tr>
+  <td><a class="proj" href="https://github.com/SDanker/iauso">iauso</a> (SDanker)<br><span class="small">1★ · MIT · 2026-09</span></td>
+  <td>Raspberry Pi + Waveshare 2.15″, 296×160, 4 цвета. Проверена только эта панель. В версии 1.2 добавлены другие панели Waveshare, включая 4.2″, через вендорные драйверы. Полный refresh около 20 с, partial не упомянут. Жёлтый от 70 %, красный от 90 %. <span class="tag dark">прочитано</span></td>
+  <td>Claude (эндпойнт Claude Code) и Codex. Три режима: <code>local</code>, <code>file</code> и <code>api</code>. В <code>api</code> сервер собирает данные и отдаёт кеш на <code>GET /v1/usage</code>, так что несколько экранов делят один набор запросов.</td>
+  <td>Кеш. На 429 — отложенный backoff, который переживает перезапуск, и минимум 180 с между попытками. Токены только читает и не обновляет: при протухании экран пишет «RENOVAR SESION». Устаревшее помечается, нулём не рисуется.</td>
+  <td>Персистентный backoff, «не перерисовывать, если картинка та же» плюс суточный maintenance-refresh, общий сервер на несколько экранов. Оговорка автора: на реальных аккаунтах и железе не тестировалось.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/LindsayB610/codex-usage-desk-display">codex-usage-desk-display</a> (LindsayB610)<br><span class="small">0★ · лицензия не определена (в репо файлы Apache-2.0 и GPL-2.0) · 2026-09</span></td>
+  <td>Elecrow CrowPanel 2.13″, 250×122, чёрно-белая. Обычные обновления — partial-волной, после каждых 24 partial и после перезагрузки — полный cleanup. Последний кадр остаётся, когда Mac спит. <span class="tag dark">прочитано</span></td>
+  <td>Только Codex. Сервис на Mac читает <code>account/rateLimits/read</code> у локального <code>codex app-server</code> (протокол экспериментальный, автор предупреждает). Берёт окно на 10080 минут, как бы оно ни называлось: primary или secondary. По USB, с подтверждением «displayed» против «written».</td>
+  <td>Токенов на микроконтроллере нет совсем. «Фильтр приватности»: наружу уходят только числа и время. Парсер fail-closed: при смене формата показывает пусто, ничего не выдумывает. На экране «LAST REFRESH».</td>
+  <td>Правило для вашего BLE-протокола: только производные числа, подтверждение приёма, окна по длительности. Метка времени подтверждённого обновления.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/nsyll/clawdometer-eink">clawdometer-eink</a> (nsyll)<br><span class="small">7★ · MIT · 2026-07</span></td>
+  <td>Waveshare ESP32-S3-ePaper-1.54: 200×200, ч/б, SSD1681, GxEPD2, partial и hibernate. Звуки через кодек ES8311. <span class="tag dark">прочитано</span></td>
+  <td>Python-демон (bleak + httpx) на Mac шлёт JSON по BLE примерно раз в минуту. Квота — минимальный запрос к <code>api.anthropic.com</code> и числа из заголовков. Статусы <b>WORKING / NEEDS YOU / QUESTION / DONE</b> приходят из хуков Claude Code. Статистика из <code>~/.claude/projects/**/*.jsonl</code>.</td>
+  <td>Про 429 README молчит. Без Mac через 5 минут «zZ» и глубокий сон (около 20 µА), проверка демона раз в 30 минут. Батарея: меньше 10 % — сигнал, меньше 3 % — выключение. Заряда хватает примерно на неделю.</td>
+  <td>Статус агента, текст вопроса под баннером, шесть разных звуковых сигналов (в том числе «throttled» и «limit lifted»), деградация при потере хоста, пороги батареи.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/dennislwy/esp32-claude-meter">esp32-claude-meter</a> (dennislwy; раньше <code>esp32-epaper-claude-meter</code>)<br><span class="small">MIT · v0.0.9</span></td>
+  <td>Waveshare 1.54″, 200×200, ч/б, partial и full. В README назван LVGL и локальная библиотека <code>Epaper154</code>, GxEPD2 не назван. <span class="tag dark">прочитано</span></td>
+  <td>Автономно: плата сама ходит на <code>api.anthropic.com</code> с токенами от <code>claude setup-token</code>. До двух аккаунтов, опрос 1–5 минут. Эндпойнт в README не назван; в сводке поиска — заголовки <code>anthropic-ratelimit-unified-*</code> <span class="tag">сводка поиска</span>.</td>
+  <td>429 не описан. Зато: «Pause Hours» (ночная пауза), 7-дневное кольцо истории в LittleFS (около 96 записей в сутки) и графики, звук при пороге 50–99 %, секреты шифруются AES-256-GCM по PIN. Автор честно пишет: при первой настройке точка доступа открытая, по HTTP.</td>
+  <td>Ночная пауза, 7-дневная история на самой плате, второй аккаунт. <b>Единственный в обзоре, кто, как и мы, держит доступ на самой плате.</b></td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/steven95421/clawdmeter-epaper">clawdmeter-epaper</a> (steven95421)<br><span class="small">0★ · лицензии нет · 2026-05</span></td>
+  <td>Waveshare ESP32-S3-ePaper-1.54G: 200×200, 4 цвета, LVGL 9. Полный refresh около 15 с, partial не упомянут. Шрифты Tiempos и Styrene — проприетарные. <span class="tag dark">прочитано</span></td>
+  <td>Демон на macOS берёт токен из Keychain, раз в 60 с шлёт минимальный запрос Haiku к <code>/v1/messages</code> и берёт числа из заголовков <code>anthropic-ratelimit-unified-5h-utilization</code> и парных. Дальше по BLE.</td>
+  <td>В README про 429 нет. Плата просыпается примерно раз в 15 минут и спит, заряда хватает «на недели».</td>
+  <td>Только идея заголовков. Код и шрифты брать нельзя: нет лицензии, шрифты и маскот чужие.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/cutler-sg/inky-claude-codex-usage">inky-claude-codex-usage</a> (cutler-sg)<br><span class="small">0★ · MIT · 2026-10</span></td>
+  <td>Pi Zero 2 W + Pimoroni Inky Impression 5.7″, 600×448, 7 цветов. Шесть иллюстрированных раскладок, меняются на каждом обновлении, переключаются физической кнопкой. <span class="tag">сводка поиска</span></td>
+  <td>Claude и Codex: оставшийся лимит и время сброса. Опрос раз в 10 минут через CLIProxyAPI, что это за слой — не вскрывал.</td>
+  <td>Не описано.</td>
+  <td>Ротация «картинок» — декор. Кнопка переключения раскладки у вас уже есть.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/WGeeBalti/ESP32_DesktopHUD">ESP32_DesktopHUD</a> (WGeeBalti)<br><span class="small">страница отдаёт 404 на 15.11.2026</span></td>
+  <td>Claude на Elecrow CrowPanel: e-paper 2.13″ (250×122) и круглый IPS с энкодером. Прошивка опрашивает локальный прокси, прокси отдаёт готовый кадр. <span class="tag red">не проверено</span></td>
+  <td>PC-прокси читает <code>~/.claude/.credentials.json</code>.</td>
+  <td>Кеш и пауза 180 с между обращениями к Anthropic.</td>
+  <td>Идея «кадр рисует хост, плата только показывает». Репозиторий недоступен, детали только из сводки поиска.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://makerworld.com/en/models/2322517-epaper-dashboard-waveshare-10-85">E-paper dashboard 10.85″</a> (MakerWorld)</td>
+  <td>Waveshare 10.85″, корпус под печать. Виджеты Claude Code (дневной и недельный лимит, время сброса), Codex, Antigravity, Bambu Lab. <span class="tag">сводка поиска</span></td>
+  <td>Не вскрывал.</td><td>Не вскрывал.</td><td>Показывает, что мультипровайдерный e-paper-дашборд в сообществе уже строят.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/jellydn/token-pulse/issues/5">token-pulse #5</a> (jellydn)</td>
+  <td>Запрос на фичу: ESP32 + e-paper клиент, deep sleep, CodexBar как бэкенд. Ничего не построено. <span class="tag">сводка поиска</span></td>
+  <td>—</td><td>—</td><td>Признак спроса, готового кода нет.</td>
+</tr>
+</tbody></table></div>
+
+<h3 id="otherdisp">2.2 Бадди на других экранах (LCD, AMOLED, планшет)</h3>
+<p>Здесь живёт большинство «бадди»-идей: статусы агента, маскоты, умное переключение окон, алерты.</p>
+<div class="tw"><table>
+<thead><tr><th>Проект</th><th>Железо</th><th>Данные и 429</th><th>Какие «бадди»-функции</th></tr></thead>
+<tbody>
+<tr>
+  <td><a class="proj" href="https://github.com/HermannBjorgvin/Clawdmeter">Clawdmeter</a> (HermannBjorgvin)<br><span class="small">2351★ · лицензии нет · активен (push 2026-11-14)</span></td>
+  <td>ESP32 AMOLED и LCD: флагман Waveshare AMOLED 2.16 (480×480), шесть стабильных и около 14 экспериментальных плат. E-paper 1.54″ — «experimental, минимальный UI, медленный partial». Десктоп-приложение (macOS, Windows, Linux, Nix) прошивает и настраивает плату; плата по BLE выглядит как клавиатура. <span class="tag dark">прочитано</span></td>
+  <td>Эндпойнт, заголовки и 429 в README не названы. Автор пишет, что шрифты и маскот Anthropic используются без разрешения, и потому копилефт-лицензию не ставит.</td>
+  <td>Маскот Clawd реагирует на промпты и просит внимания, когда сессии нужен ответ (по хукам, без хуков работают только счётчики). Страница «Device» в приложении: прошивка и настройки платы. По README — упоминание в TechCrunch, май 2026.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/catorendal-a11y/limitbuddy">LimitBuddy</a> (catorendal-a11y)<br><span class="small">2★ · MIT · 2026-10</span></td>
+  <td>4.3″ сенсорный экран (ESP32-P4, экспериментально S3). Хост на Windows по USB, без Wi-Fi. <span class="tag dark">прочитано</span></td>
+  <td>Claude — через <code>/api/oauth/usage</code>, не чаще раза в 5 минут. Токен не хранит, обновление логина отдаёт самому Claude CLI. Codex — через официальный Codex CLI. Copilot, Cursor, Antigravity — через внешний «числовой мост». Про 429 в README нет.</td>
+  <td>Компаньоны (NOVA, ORBIT, CLAUDE), метка RUN / WAIT / FAULT / DONE, <b>белая отметка «равномерного расхода»</b> на полосе, янтарная и красная кромка при малом остатке, 7-дневная история, 1–3 карточки на главной.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/tobymarks/esp32-ai-monitor">AI Monitor</a> (tobymarks)<br><span class="small">24★ · MIT · push 2026-11-14</span></td>
+  <td>CYD 2.8″ (320×240) и Guition 4″ (480×480). Приложение для macOS и Windows, JSON по USB-serial. <span class="tag dark">прочитано</span></td>
+  <td>Данные берёт у локального CLI CodexBar: Claude, ChatGPT, Gemini CLI, GitHub Copilot, Cursor, Antigravity. К провайдерам сама не ходит. Про 429 в README нет.</td>
+  <td><b>Умное переключение окон</b>: провайдер выходит на экран, если расход вырос минимум на 5 п.п., пересёк 80/90/100 % или окно сбросилось; ещё — когда сессия Claude Code ждёт разрешения или закончила. Окно держится минимум 2 минуты, у каждого окна пауза 10 минут, касание паузит автопереключение на 10 минут. У Copilot — кольцо «premium requests».</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/GavinnnTann/esp32-claude">esp32-claude</a> (GavinnnTann)<br><span class="small">2★ · лицензии нет · 2026-08</span></td>
+  <td>Круглый TFT 240×240, LVGL + Lottie, две кнопки, BLE. <span class="tag dark">прочитано</span></td>
+  <td>Читает <code>cachedUsageUtilization</code> из <code>~/.claude.json</code>; автор мерил, что запаздывание бывает от 142 секунд до 47 минут. Опционально — statusLine, тогда цифры свежие. Автор советует не выводить квоту из токенов: она взвешенная.</td>
+  <td>Краб-маскот по модели и уровню усилия; на 85 % сессии клюёт носом, на 100 % уходит спать. При обрыве связи показывает <b>возраст данных</b>, а не нули.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/TonyRod116/ai-desk-display">ai-desk-display</a> (TonyRod116)<br><span class="small">4★ · MIT · 2026-10</span></td>
+  <td>Любой планшет или экран с браузером, Android-приложение, CYD по локальному HTTP, GeekMagic SmallTV. <span class="tag dark">прочитано</span></td>
+  <td>Читалки на компьютере ходят к провайдерам по официальным CLI-логинам. Эндпойнты не названы.</td>
+  <td>Анимированные сцены («Isometric City» с окнами по квоте, «Versus» с бойцами), жесты на сенсоре, кроме квоты — CPU, GPU, диски. Алертов в README нет.</td>
+</tr>
+</tbody></table></div>
+
+<h3 id="desktop">2.3 Десктоп, Home Assistant, TRMNL</h3>
+<div class="tw"><table>
+<thead><tr><th>Проект</th><th>Что это и откуда данные</th><th>429 и токены</th><th>Что стоит подсмотреть</th></tr></thead>
+<tbody>
+<tr>
+  <td><a class="proj" href="https://github.com/steipete/CodexBar">CodexBar</a><br><span class="small">23.2k★ · MIT · push 2026-11-14</span></td>
+  <td>Меню-бар macOS, Linux-приложение и CLI, около 100 провайдеров. Codex: OAuth API или локальный CLI. Claude: OAuth API, cookies браузера или fallback через PTY. <span class="tag dark">прочитано</span></td>
+  <td>В README про 429 и ротацию не сказано; есть запрос <a href="https://github.com/steipete/CodexBar/issues/1894">на источник через минимальный запрос и заголовки</a>. По умолчанию «adaptive» интервал, есть ручной 1–30 минут.</td>
+  <td>Кривая «выгорания» с направляющей равномерного расхода, уведомления и предупреждения о сбросе, виджеты WidgetKit. Именно его CLI питает AI Monitor.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/vinzdg/codenotch">Codenotch</a> (vinzdg)<br><span class="small">3.1k★ · MIT · push 2026-11-15</span></td>
+  <td>«Нотч» на краю экрана macOS; Windows-порт на Rust/Tauri. Claude берёт <b>по очереди</b> из: кеша ответа Claude Desktop на диске, вывода <code>claude /usage</code>, OAuth-токена из Keychain. Codex читает из <code>auth.json</code>. <span class="tag dark">прочитано</span></td>
+  <td><b>Лучшая обработка 429 в выборке:</b> backoff 60 с, удвоение, потолок 15 минут, дедлайн сохраняется на диск. <code>Retry-After: 0</code> считает только минимумом. Адаптивный опрос: 30 с, пока сессия работает, 5 минут в простое, сразу при смене окна. Codex-токены не копирует, не обновляет и не пишет.</td>
+  <td>Алерт один раз при пересечении 80 % и 100 %; нотч раскрывается на 5 секунд, когда сессия закончилась или ждёт вас; вращающаяся дуга — занят, пульсирующее янтарное кольцо — ждёт вас; приложение-компаньон на телефоне по QR (только локальная сеть).</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/corgan2222/ha-clawdmeter">ha-clawdmeter</a><br><span class="small">5★ · MIT</span></td>
+  <td>Интеграция HACS, опрос эндпойнта раз в 300 с (настраивается 60–3600). Своя OAuth-сессия, добавляется по ссылке с вставкой кода. <span class="tag dark">прочитано</span></td>
+  <td>Автор предупреждает: слишком частый опрос может заблокировать эндпойнт примерно на сутки. Значения держатся до шести опросов (около 30 минут), потом «unavailable».</td>
+  <td><b>Burn rate</b> за 5 и 30 минут (%/ч), time-to-limit, <b>runway</b> «успеет ли сброситься раньше, чем кончится», пик дня переживает рестарт, блюпринт автоматизации по порогу.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/stevengoossensB/ha-claude-usage">ha-claude-usage</a> (stevengoossensB)<br><span class="small">1★ · MIT · 2026-10</span></td>
+  <td>HACS. <b>Собственная OAuth-сессия</b> с тем же публичным клиентом, что у Claude Code; логин в браузере, код вставляется в форму. Сенсоры на session, week, по моделям, extra usage, плюс токены и стоимость API. <span class="tag dark">прочитано</span></td>
+  <td>Сессия отдельная, поэтому <b>не затрагивает логин Claude Code</b> на компьютере. Опрос 5 минут, автор советует не чаще 2. Backoff на 429 в README не описан.</td>
+  <td>Решение проблемы ротации refresh-токена: у потребителя своя «семья» токенов.</td>
+</tr>
+<tr>
+  <td>Остальные HA: <a href="https://github.com/nkcx/ha-ai-usage">ha-ai-usage</a> (Claude, Gemini, Codex), <a href="https://github.com/shatteredeagle/claude-ha-usage">claude-ha-usage</a> (statusLine → webhook), <a href="https://community.home-assistant.io/t/ccusage-mqtt-claude-code-anthropic-usage-as-15-mqtt-sensors-with-a-mood-driven-dashboard/1010780">ccusage-mqtt</a> (15 MQTT-сенсоров, «настроение»), <a href="https://github.com/luukkii123/ha-claude-usage">luukkii123</a></td>
+  <td>Разные источники: эндпойнт, statusLine, локальные логи. <span class="tag">сводка поиска</span></td>
+  <td>—</td>
+  <td>Для вашей платы HA нужен только как альтернативный источник: Mac или HA отдают числа, плата показывает.</td>
+</tr>
+<tr>
+  <td>Меню-бар только для Claude: <a href="https://github.com/figueiredouc/claude-limits">claude-limits</a>, <a href="https://github.com/GordonBeeming/claude-bar">claude-bar</a> (раз в минуту), <a href="https://github.com/LunaParker/claude-macos-menu-usage">claude-macos-menu-usage</a>, <a href="https://github.com/the-coder-james/the-usage-monitor">the-usage-monitor</a>, <a href="https://github.com/jasonChen0604/claude-usage-monitor">claude-usage-monitor</a> (только statusLine)</td>
+  <td>Эндпойнт, минимальный запрос с заголовками или statusLine. the-usage-monitor и claude-usage-monitor подробно прочитал, про остальные — по сводке. <span class="tag">сводка поиска</span></td>
+  <td>the-usage-monitor каждую минуту шлёт минимальный запрос и в README прямо пишет, что приложение «не соответствует Consumer ToS» и только для личного пользования.</td>
+  <td>Предупреждения авторов о ToS (см. 6.4) и пример «только statusLine» (claude-usage-monitor).</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/emaspa/trmnl-claude">trmnl-claude</a> (emaspa)<br><span class="small">14★ · GPL-3.0</span>; рядом <a href="https://github.com/carledwards/claude-usage-trmnl">carledwards</a>, <a href="https://github.com/reeeeeee-dev/claude-usage-trmnl">reeeeeee-dev</a>, <a href="https://github.com/rohitg00/claude-dashboard-trmnl">rohitg00</a></td>
+  <td>Рецепт для e-ink TRMNL: скрипт на Mac шлёт числа на webhook, картинку рисует шаблон на стороне TRMNL. Session и week — минимальный запрос с <code>max_tokens: 1</code> и заголовки (около 0.5 с). Строка по модели обновляется отдельно: раз в 60 минут, раз в 15, когда выше 80 %. Если заголовки пусты — fallback на скрейп <code>/usage</code> через PTY, около 20 с. <span class="tag dark">прочитано</span></td>
+  <td>TRMNL принимает 12 webhook-постов в час на плагин, поэтому есть <code>--debounce</code>. Устаревшая строка по модели старше 6 часов выбрасывается.</td>
+  <td>Разные частоты для разных строк. Спарклайн активности за 7 дней, стрик и стрелка тренда относительно вчера. <a href="https://trmnl.com/recipes/263932">Рецепт в галерее TRMNL</a>.</td>
+</tr>
+<tr>
+  <td>По логам, а не по квоте: <a href="https://github.com/ryoppippi/ccusage">ccusage</a> (19.4k★), <a href="https://openusage.sh/">OpenUsage</a> (35 инструментов, burn rate, Prometheus-хаб), <a href="https://github.com/splunk/token-meter">token-meter</a>, <a href="https://github.com/juliantanx/aiusage">aiusage</a></td>
+  <td>Считают токены и стоимость из локальных логов. <span class="tag">сводка поиска</span></td>
+  <td>—</td>
+  <td>Числа в процентах квоты они не дают: автор esp32-claude отдельно предупреждает, что квота не пропорциональна токенам. Годятся для страницы «статистика», а не для строк с лимитом.</td>
+</tr>
+</tbody></table></div>
+
+<h3 id="board">2.4 NM-EPD-420 и CrowPanel 4.2″</h3>
+<div class="tw"><table>
+<thead><tr><th>Проект</th><th>Что это</th><th>Что полезно нам</th></tr></thead>
+<tbody>
+<tr>
+  <td><a class="proj" href="https://github.com/RockBase-lab/ESP32-Dashboard">RockBase ESP32-Dashboard</a><br><span class="small">0★ · MIT · создан 2026-11-09 (раньше лежал в <code>RockBase-iot</code>)</span></td>
+  <td>Официальный дашборд производителя: погода (Open-Meteo), таймлайн, мировое время, фокус-часы, AHT20. GxEPD2 1.6.8, шрифты FreeSans от 4 до 48 pt, иконки 16–96 px. Deep sleep, по умолчанию 30 минут, окно «сон/подъём», портал по удержанию Boot 2 с на <code>192.168.4.1</code>. OTA нет — только USB или общий образ. Окружения <code>nm-display-420</code> и <code>nm-epd-420-4c</code>. <span class="tag dark">прочитано</span></td>
+  <td>Совпадают пины панели с нашими (CS 3, DC 4, RST 5, BUSY 6, SCK 2, MOSI 1). Видно, что аудиокодек ES8311 в прошивке отключают при старте для экономии 3 мА, то есть он на плате.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://wiki.rockbaseiot.com/docs/projects/biscuit/">Biscuit</a> (RockBase)</td>
+  <td>Прошивка-читалка (форк CrossPoint Reader) с плиточным главным экраном: батарея, heap, uptime, Wi-Fi. Окружения <code>nm_epd_420</code> (трёхцветная) и <code>nm_epd_420_bw</code>. Прошивка из браузера на <code>flash.rockbaseiot.com</code>. Две кнопки отображаются на семь кнопок оригинала. Лицензия на странице не указана. <span class="tag dark">прочитано</span></td>
+  <td>Схема управления двумя кнопками через короткое и долгое нажатие, как у нас.</td>
+</tr>
+<tr>
+  <td><a href="https://wiki.rockbaseiot.com/docs/projects/EPD-opendisplay/">OpenDisplay</a> и <a href="https://github.com/v3n0m3n0/MeshCore-NM-EPD-420-MOD">MeshCore-NM-EPD-420-MOD</a></td>
+  <td>OpenDisplay — порт на четырёхцветную панель с интеграцией Home Assistant. MeshCore-мод (1★, MIT) — Companion BLE для LoRa на чёрно-белой плате, свой класс <code>NMEPD420Display</code>. <span class="tag">сводка поиска</span></td>
+  <td>Подтверждает: на этой плате существуют и чёрно-белая, и трёх-, и четырёхцветная панели; прошивку надо сверять с классом GxEPD2.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/robominds/CrowPanel-ESP32-E-Paper-4.2-Display">robominds / CrowPanel 4.2″</a><br><span class="small">0★ · MIT · 2026-10</span></td>
+  <td>Часы, погода, MQTT. Подробный документ по железу. На одном SKU две панели: V1.0 (SSD1683, <code>GxEPD2_420_GDEY042T81</code>) и V1.2 (UC8276C, <code>GxEPD2_420_SE0420NQ04</code>), различаются полярностью BUSY; прошивка определяет тип при загрузке. Partial около 0.6 с, full около 3.1 с; полная перерисовка каждые 30 обновлений и при смене экрана; <b>перерисовка только если описание экрана изменилось</b>; состояние сохраняется на случай пропажи питания. <span class="tag dark">прочитано</span></td>
+  <td>Политика «перерисовывать только по изменению» и счётчик полных обновлений. У нас в коммите «Record panel identification by refresh timing» решена похожая задача: определить панель при загрузке.</td>
+</tr>
+<tr>
+  <td><a class="proj" href="https://github.com/echo-cool/e-paper-weather">echo-cool / e-paper-weather</a></td>
+  <td>Погодная станция на CrowPanel 4.2″: всегда онлайн, без deep sleep, OTA через браузер и <code>espota</code>, двойной OTA-раздел, адрес и город задаются в веб-интерфейсе и хранятся в NVS, кадр отдаётся на <code>/screenshot.bmp</code>. Ссылку на GxEPD2 даёт только тема репозитория. <span class="tag dark">прочитано</span></td>
+  <td>Ближайший по режиму работы к нашему (always-on, OTA). Берём идею <code>/screenshot.bmp</code> и CI с готовым <code>factory.bin</code>.</td>
+</tr>
+<tr>
+  <td><a href="https://github.com/Elecrow-RD/CrowPanel-ESP32-4.2-E-paper-HMI-Display-with-400-300">Elecrow-RD (официальный)</a> и <a href="https://www.espboards.dev/blog/elecrow-crowpanel-epaper-esphome-lvgl/">ESPHome + LVGL для CrowPanel</a></td>
+  <td>Даташит, схемы, заводская прошивка и исходники. ESPHome-компонент как альтернатива GxEPD2. <span class="tag">сводка поиска</span></td>
+  <td>Запасной путь, если решите уйти с самописной прошивки.</td>
+</tr>
+</tbody></table></div>
+<div class="box"><p><b>Итог по поиску:</b> квоты ИИ на 4.2″ e-paper (CrowPanel или NM-EPD-420) я не нашёл. Все найденные квота-дисплеи на e-paper — 1.54″, 2.13″, 2.15″, 5.7″ и 10.85″. Покрытие поиска ограничено (см. раздел 7).</p></div>
+
+<!-- ============================================================ 3 -->
+<h2 id="data">3. Откуда берут данные</h2>
+
+<h3 id="topology">3.1 Где живёт токен</h3>
+<figure>
+<svg viewBox="0 0 900 360" width="100%" role="img" aria-label="Три схемы: токен на плате, токен на хосте, общий сборщик">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#61615b"/>
+    </marker>
+  </defs>
+  <g fill="none" stroke="#9a9a92" stroke-width="1.2">
+    <rect x="10" y="10" width="880" height="100" rx="4"/>
+    <rect x="10" y="125" width="880" height="100" rx="4"/>
+    <rect x="10" y="240" width="880" height="100" rx="4"/>
+  </g>
+
+  <text x="24" y="32" font-size="13" font-weight="600">А. Токен на плате (наш режим прокси; dennislwy)</text>
+  <g fill="#fff" stroke="#1c1c1a" stroke-width="1.2">
+    <rect x="40" y="48" width="150" height="44" rx="3"/>
+    <rect x="300" y="48" width="170" height="44" rx="3"/>
+    <rect x="560" y="48" width="180" height="44" rx="3"/>
+  </g>
+  <text x="115" y="75" font-size="13" text-anchor="middle">Плата + токены</text>
+  <text x="385" y="75" font-size="13" text-anchor="middle">Прокси в LAN</text>
+  <text x="650" y="75" font-size="13" text-anchor="middle">Anthropic / OpenAI</text>
+  <line x1="190" y1="70" x2="298" y2="70" stroke="#61615b" stroke-width="1.4" marker-end="url(#ar)"/>
+  <line x1="470" y1="70" x2="558" y2="70" stroke="#61615b" stroke-width="1.4" marker-end="url(#ar)"/>
+  <text x="755" y="66" font-size="12" fill="#61615b">плата сама ротирует</text>
+  <text x="755" y="82" font-size="12" fill="#61615b">refresh-токен</text>
+
+  <text x="24" y="147" font-size="13" font-weight="600">Б. Токен на хосте, плата получает числа (большинство; наш режим Mac)</text>
+  <g fill="#fff" stroke="#1c1c1a" stroke-width="1.2">
+    <rect x="40" y="170" width="190" height="44" rx="3"/>
+    <rect x="360" y="170" width="150" height="44" rx="3"/>
+    <rect x="560" y="170" width="180" height="44" rx="3"/>
+  </g>
+  <text x="135" y="197" font-size="13" text-anchor="middle">Mac / ПК: приложение</text>
+  <text x="435" y="197" font-size="13" text-anchor="middle">Плата</text>
+  <text x="650" y="197" font-size="13" text-anchor="middle">Anthropic / OpenAI</text>
+  <line x1="230" y1="192" x2="358" y2="192" stroke="#61615b" stroke-width="1.4" marker-end="url(#ar)"/>
+  <text x="294" y="184" font-size="12" text-anchor="middle" fill="#61615b">BLE / USB</text>
+  <path d="M135 170 L135 158 L650 158 L650 168" fill="none" stroke="#61615b" stroke-width="1.4" marker-end="url(#ar)"/>
+  <text x="755" y="190" font-size="12" fill="#61615b">на плату — только</text>
+  <text x="755" y="206" font-size="12" fill="#61615b">числа и время</text>
+
+  <text x="24" y="262" font-size="13" font-weight="600">В. Общий сборщик (iauso в режиме api, Home Assistant, TRMNL)</text>
+  <g fill="#fff" stroke="#1c1c1a" stroke-width="1.2">
+    <rect x="40" y="278" width="190" height="44" rx="3"/>
+    <rect x="360" y="270" width="110" height="26" rx="3"/>
+    <rect x="360" y="304" width="110" height="26" rx="3"/>
+    <rect x="520" y="270" width="150" height="26" rx="3"/>
+    <rect x="520" y="304" width="150" height="26" rx="3"/>
+  </g>
+  <text x="135" y="305" font-size="13" text-anchor="middle">Сервер / Pi / HA</text>
+  <text x="415" y="288" font-size="12" text-anchor="middle">Экран 1</text>
+  <text x="415" y="322" font-size="12" text-anchor="middle">Экран 2</text>
+  <text x="595" y="288" font-size="12" text-anchor="middle">Сенсоры HA</text>
+  <text x="595" y="322" font-size="12" text-anchor="middle">Телефон, виджет</text>
+  <line x1="230" y1="292" x2="358" y2="283" stroke="#61615b" stroke-width="1.4" marker-end="url(#ar)"/>
+  <line x1="230" y1="308" x2="358" y2="317" stroke="#61615b" stroke-width="1.4" marker-end="url(#ar)"/>
+  <text x="700" y="290" font-size="12" fill="#61615b">один набор запросов</text>
+  <text x="700" y="306" font-size="12" fill="#61615b">к провайдерам на всех</text>
+</svg>
+<figcaption>Бюджет на <code>/api/oauth/usage</code>, по измерениям в <a href="https://github.com/realiti4/claude-swap/issues/220">claude-swap#220</a>, привязан к аккаунту. Поэтому в схеме А и Б каждый дополнительный опрашивающий клиент с того же аккаунта съедает общий лимит.</figcaption>
+</figure>
+
+<h3 id="claude-src">3.2 Источники для Claude</h3>
+<div class="tw"><table>
+<thead><tr><th>Источник</th><th class="n">session 5ч</th><th class="n">week</th><th class="n">по моделям</th><th>Запросы и цена</th><th>Оговорки</th><th>Кто использует</th></tr></thead>
+<tbody>
+<tr>
+  <td><code>GET /api/oauth/usage</code><br><span class="small">наш источник</span></td>
+  <td class="n">да</td><td class="n">да</td><td class="n"><b>да</b></td>
+  <td>Один запрос на опрос, бюджет жёсткий. Нужна область <code>user:profile</code>: для setup-токена ответ 403 <a href="https://github.com/uwuclxdy/clauth/issues/110">(clauth#110)</a> <span class="tag">сводка поиска</span>.</td>
+  <td>Не документирован. 429 приходит с <code>Retry-After: 0</code> и может держаться днями <a href="https://github.com/realiti4/claude-swap/issues/220">(claude-swap#220)</a>. Тема <a href="https://github.com/anthropics/claude-code/issues/31637">claude-code#31637</a> закрыта как «not planned» без ответа Anthropic.</td>
+  <td>Мы, CodexBar, HA-интеграции, LimitBuddy, Codenotch</td>
+</tr>
+<tr>
+  <td>Минимальный запрос <code>POST /v1/messages</code> и заголовки <code>anthropic-ratelimit-unified-*</code></td>
+  <td class="n">да</td><td class="n">да</td><td class="n">нет</td>
+  <td>Модель <code>claude-haiku-4-5</code>, <code>max_tokens: 1</code>, около 10 токенов. Нужен заголовок <code>anthropic-beta: oauth-2025-04-20</code>. Заголовки приходят даже в ответе 429 и работают с setup-токеном. <a href="https://github.com/nsanden/claude-rate-monitor">claude-rate-monitor</a> оценивает один запрос примерно в $0.001; ответ на вопрос «засчитывается ли в квоту», в README отсутствует. <span class="tag dark">прочитано</span></td>
+  <td>Только окна 5ч и 7д, без разбивки по моделям <a href="https://github.com/realiti4/claude-swap/issues/220">(claude-swap#220)</a>. Заголовки найдены реверсом клиента, таблицы заголовков у Anthropic нет.</td>
+  <td>clawdmeter-epaper, clawdometer-eink, the-usage-monitor, trmnl-claude, claude-rate-monitor</td>
+</tr>
+<tr>
+  <td>statusLine, поле <code>rate_limits</code></td>
+  <td class="n">да</td><td class="n">да</td><td class="n">нет</td>
+  <td>Ноль запросов. Скрипт получает JSON на stdin: <code>five_hour</code> и <code>seven_day</code> с <code>used_percentage</code> и <code>resets_at</code>. Есть <code>refreshInterval</code>. <span class="tag dark">прочитано: <a href="https://code.claude.com/docs/en/statusline">официальная документация</a></span></td>
+  <td>Только для подписчиков Pro, Max, Ultra и только после первого ответа в сессии. Данные есть, только пока открыта сессия Claude Code. Просьба добавить окна по моделям (<a href="https://github.com/anthropics/claude-code/issues/82656">#82656</a>) на момент поиска не выполнена.</td>
+  <td>claude-usage-monitor (jasonChen0604), esp32-claude (опционально), claude-ha-usage</td>
+</tr>
+<tr>
+  <td>Кеш ответа Claude Desktop на диске (<code>/api/organizations/&lt;id&gt;/usage</code>)</td>
+  <td class="n">да</td><td class="n">да</td><td class="n">?</td>
+  <td>Ноль ваших запросов: Desktop уже ходит сам. Старше 30 минут Codenotch считает данные несвежими. <span class="tag dark">прочитано</span></td>
+  <td>Нужен запущенный Claude Desktop. Состав полей в README не раскрыт, про модели не знаю.</td>
+  <td>Codenotch</td>
+</tr>
+<tr>
+  <td>Скрейп <code>claude /usage</code> через PTY</td>
+  <td class="n">да</td><td class="n">да</td><td class="n"><b>да</b></td>
+  <td>Около 20 с на запуск, поднимает процесс <code>claude</code>.</td>
+  <td>Это парсинг интерфейса, может сломаться при смене вёрстки. Работает только на хосте.</td>
+  <td>CodexBar (fallback), trmnl-claude (fallback и строка по моделям), Codenotch</td>
+</tr>
+<tr>
+  <td><code>cachedUsageUtilization</code> в <code>~/.claude.json</code></td>
+  <td class="n">да</td><td class="n">да</td><td class="n">нет</td>
+  <td>Ноль запросов.</td>
+  <td>Устаревает нерегулярно: автор замерил от 142 секунд до 47 минут.</td>
+  <td>esp32-claude</td>
+</tr>
+<tr>
+  <td>Событие <code>rate_limit_event</code> в Agent SDK</td>
+  <td class="n">частично</td><td class="n">частично</td><td class="n">частично</td>
+  <td>Приходит при смене статуса. Поле <code>utilization</code> в обычном режиме часто отсутствует <a href="https://github.com/anthropics/claude-code/issues/50518">(#50518)</a>, <a href="https://github.com/anthropics/claude-code/issues/91857">(#91857)</a>.</td>
+  <td>Это путь для тех, кто сам запускает агента через SDK; для пассивного монитора не годится. <span class="tag">сводка поиска</span></td>
+  <td>—</td>
+</tr>
+</tbody></table></div>
+<div class="box key"><p><b>Следствие для Agent Meter.</b> Протокол BLE версии 1 уже несёт поля <code>opus</code>, <code>sonnet</code> и <code>fable</code>. Строки Opus и Fable weekly нельзя заменить ни заголовками, ни statusLine. Чтобы они остались, Mac-приложению нужен <code>/api/oauth/usage</code> с нормальным backoff или скрейп <code>/usage</code>. Кеш Claude Desktop подойдёт, только если в нём есть окна по моделям: этого я не выяснил. Заголовки и statusLine годятся как запасной путь только для session и week.</p></div>
+
+<h3 id="codex-src">3.3 Источники для Codex</h3>
+<div class="tw"><table>
+<thead><tr><th>Источник</th><th>Что отдаёт</th><th>Оговорки</th><th>Кто использует</th></tr></thead>
+<tbody>
+<tr>
+  <td><code>GET chatgpt.com/backend-api/wham/usage</code><br><span class="small">наш источник</span></td>
+  <td><code>primary_window</code> и <code>secondary_window</code>, в каждом <code>used_percent</code>, <code>limit_window_seconds</code>, <code>reset_at</code>; в запросе <code>ChatGPT-Account-Id</code>. <span class="tag">сводка поиска</span></td>
+  <td><b>Окна нельзя называть по позиции.</b> На team-плане primary — 5 часов (18000 с), secondary — неделя (604800 с); на prolite primary — уже неделя, а secondary — null. Классифицировать нужно по <code>limit_window_seconds</code> (<a href="https://github.com/danielsolin/pi-codex-usage">pi-codex-usage</a>, <a href="https://github.com/RunMaestro/Maestro/issues/1596">Maestro#1596</a>). Путь с лишним <code>/codex/</code> отдаёт Cloudflare 403 <a href="https://github.com/caigee-cmd/cli2api/pull/466">(cli2api#466)</a>. Ограничение на уровне модели в payload может не попасть, и тогда будет «0 %» при реально исчерпанном лимите <a href="https://github.com/vinzdg/codenotch/issues/286">(codenotch#286)</a>.</td>
+  <td>Мы, pi-codex-usage, codex-widget</td>
+</tr>
+<tr>
+  <td><code>codex app-server</code>, метод <code>account/rateLimits/read</code> и уведомление <code>account/rateLimits/updated</code></td>
+  <td>JSON-RPC по stdin/stdout; окна с <code>usedPercent</code>, <code>windowDurationMins</code> (300 — 5 часов, 10080 — неделя), <code>resetsAt</code>, <code>planType</code>, кредиты. Токены на вашей стороне не нужны. <span class="tag">сводка поиска</span></td>
+  <td>Протокол помечен экспериментальным. На некоторых бизнес-аккаунтах окна приходят пустыми. Страницу с описанием я открыл только частично: самого метода в прочитанной части не нашёл, подтверждено поиском и разбором в <a href="https://iaplabs.itch.io/codexfuse/devlog/1655686/how-to-check-codex-usage-limits-with-app-server-accountratelimitsread">CodexFuse</a>. <a href="https://learn.chatgpt.com/docs/app-server">Документация app-server</a>.</td>
+  <td>codex-usage-desk-display, CodexBar (как вариант), CodexFuse</td>
+</tr>
+<tr>
+  <td>Заголовки <code>x-codex-*</code> в ответах</td>
+  <td><code>X-Codex-Primary-Used-Percent</code>, <code>-Reset-At</code>, <code>-Window-Minutes</code>, парные для secondary. <span class="tag">сводка поиска</span></td>
+  <td>Известна проблема: если активный лимит — другой, заголовки семейства codex отбрасываются <a href="https://github.com/openai/codex/issues/58413">(openai/codex#58413)</a>.</td>
+  <td>—</td>
+</tr>
+</tbody></table></div>
+
+<!-- ============================================================ 4 -->
+<h2 id="buddy">4. Функции слежения («бадди»)</h2>
+<p>«Бадди» здесь — всё, что отвечает не на вопрос «сколько осталось», а на вопросы «успею ли», «нужен ли я агенту прямо сейчас» и «что изменилось». Ниже сначала самая весомая функция, статус агента, потом каталог остальных.</p>
+
+<h3 id="state">4.1 Статус агента по хукам</h3>
+<p>Хуки Claude Code запускают локальную команду или шлют JSON на HTTP-адрес. Этого хватает, чтобы собрать то, что у nsyll называется WORKING / NEEDS YOU / QUESTION / DONE. Соответствие событий и состояний, по <a href="https://code.claude.com/docs/en/hooks">документации хуков</a> <span class="tag dark">прочитано</span>:</p>
+
+<figure>
+<svg viewBox="0 0 900 230" width="100%" role="img" aria-label="Состояния агента и события хуков, которые переключают их">
+  <defs>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#61615b"/>
+    </marker>
+  </defs>
+  <g fill="#fff" stroke="#1c1c1a" stroke-width="1.2">
+    <rect x="20" y="90" width="130" height="50" rx="3"/>
+    <rect x="260" y="90" width="150" height="50" rx="3"/>
+    <rect x="520" y="90" width="150" height="50" rx="3"/>
+    <rect x="750" y="90" width="130" height="50" rx="3"/>
+  </g>
+  <rect x="520" y="90" width="150" height="50" rx="3" fill="none" stroke="#a9481f" stroke-width="2"/>
+  <text x="85" y="113" font-size="14" text-anchor="middle" font-weight="600">Простой</text>
+  <text x="85" y="130" font-size="11.5" text-anchor="middle" fill="#61615b">idle_prompt</text>
+  <text x="335" y="113" font-size="14" text-anchor="middle" font-weight="600">Работает</text>
+  <text x="335" y="130" font-size="11.5" text-anchor="middle" fill="#61615b">идёт ход агента</text>
+  <text x="595" y="113" font-size="14" text-anchor="middle" font-weight="600">Ждёт вас</text>
+  <text x="595" y="130" font-size="11.5" text-anchor="middle" fill="#61615b">разрешение или вопрос</text>
+  <text x="815" y="113" font-size="14" text-anchor="middle" font-weight="600">Готово</text>
+  <text x="815" y="130" font-size="11.5" text-anchor="middle" fill="#61615b">ход закончен</text>
+
+  <line x1="150" y1="108" x2="258" y2="108" stroke="#61615b" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <text x="204" y="100" font-size="11.5" text-anchor="middle" fill="#61615b">UserPromptSubmit</text>
+  <line x1="410" y1="108" x2="518" y2="108" stroke="#61615b" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <text x="464" y="100" font-size="11.5" text-anchor="middle" fill="#61615b">PermissionRequest</text>
+  <path d="M520 128 L410 128" stroke="#61615b" stroke-width="1.4" fill="none" marker-end="url(#ar2)"/>
+  <text x="464" y="146" font-size="11.5" text-anchor="middle" fill="#61615b">PostToolUse</text>
+  <path d="M370 90 Q 560 20 780 88" stroke="#61615b" stroke-width="1.4" fill="none" marker-end="url(#ar2)"/>
+  <text x="575" y="46" font-size="11.5" text-anchor="middle" fill="#61615b">Stop</text>
+  <path d="M815 140 Q 815 195 450 195 Q 85 195 85 142" stroke="#61615b" stroke-width="1.4" fill="none" marker-end="url(#ar2)"/>
+  <text x="450" y="212" font-size="11.5" text-anchor="middle" fill="#61615b">таймаут или Notification idle_prompt</text>
+</svg>
+<figcaption>Упрощённая машина состояний. Ещё полезны <code>StopFailure</code> (ход оборван ошибкой API — это отдельное состояние «ошибка»), <code>SubagentStart</code> и <code>SubagentStop</code>, <code>SessionStart</code> и <code>SessionEnd</code>, а в <code>Notification</code> — значения <code>permission_prompt</code>, <code>elicitation_dialog</code>, <code>agent_needs_input</code>, <code>agent_completed</code>.</figcaption>
+</figure>
+
+<ul>
+  <li><b>Для Codex</b> всё слабее: внешний хук <code>notify</code> в <code>~/.codex/config.toml</code> срабатывает только на <code>agent-turn-complete</code>, а событие «нужно подтверждение» есть только у уведомлений встроенного терминального интерфейса (<code>approval-requested</code>). Запрос на добавление этого события в <code>notify</code> на момент поиска был открыт (openai/codex#19921). Источник — разборы сообщества, документацию Codex про хуки я не открывал <span class="tag">сводка поиска</span>: <a href="https://codex.danielvaughan.com/2026/04/13/codex-cli-notification-pipeline-osc9-hooks-alerts/">обзор</a>, <a href="https://www.aidonenow.com/blog/codex-cli-notifications-guide">ещё один</a>.</li>
+  <li><b>Кто так делает:</b> <a href="https://github.com/nsyll/clawdometer-eink">clawdometer-eink</a> (e-ink, BLE), <a href="https://github.com/vinzdg/codenotch">Codenotch</a>, <a href="https://github.com/tobymarks/esp32-ai-monitor">AI Monitor</a>, <a href="https://github.com/HermannBjorgvin/Clawdmeter">Clawdmeter</a>, <a href="https://github.com/matthewsinclair/claudecodeusage">claudecodeusage</a> <span class="tag">сводка поиска</span>.</li>
+  <li><b>На вашей плате:</b> в документации производителя заявлены кодек ES8311, усилитель класса D и штатный динамик на 8 Ом (<code>vendor-ref/README.md</code>), а в прошивке RockBase кодек при старте отключают. То есть звуковой сигнал «ждёт вас» и «готово» технически возможен (nsyll делает именно это через ES8311). Нужно управлять GPIO 44 (Codec EN) и GPIO 41 (PA), I²S — по таблице пинов вендора.</li>
+  <li><b>Транспорт:</b> хуки живут на Mac. В BLE-протоколе версии 1 (коммит <code>4a3905a</code>) есть характеристика квот только на запись и характеристика настроек с уведомлением; для статуса логично добавить третью, небольшую, с версией в содержимом. Agent Meter ставит хуки, получает JSON и пишет туда короткое состояние.</li>
+  <li><b>Ограничение e-paper:</b> нужна быстрая перерисовка. На чёрно-белой панели (около 0.4 с partial) полоса статуса вполне реальна. На трёхцветной с полным обновлением около 25 с — нет: сигнал придёт позже, чем вы сами заметите вопрос в терминале.</li>
+</ul>
+
+<h3 id="catalog">4.2 Каталог функций</h3>
+<p>Колонка «Усилие» — для нашей платы: XS — часы, S — день, M — несколько дней, L — неделя и больше. «Плата» — вмещается ли на 400×300 e-paper без анимации.</p>
+<div class="tw"><table>
+<thead><tr><th>Функция</th><th>Что делает</th><th>Кто делает</th><th>Что нужно</th><th class="n">Усилие</th><th>Плата</th></tr></thead>
+<tbody>
+<tr>
+  <td><b>Темп расхода и вердикт «хватит ли до сброса»</b></td>
+  <td>Отметка на полосе «столько должно быть израсходовано при равномерном темпе» и слово «хватит» / «не хватит». Для недельного окна ожидаемая доля = прошедшее время ÷ длина окна, достаточно <code>resets_at</code> и процента.</td>
+  <td>CodexBar (направляющая равномерного расхода), LimitBuddy (белая отметка), ha-clawdmeter (burn rate, runway, margin)</td>
+  <td>Новых запросов нет; для burn rate по скорости нужна история</td>
+  <td class="n">S</td>
+  <td>отлично: статичная отметка</td>
+</tr>
+<tr>
+  <td><b>Статус агента</b> (раздел 4.1)</td>
+  <td>«Работает / ждёт вас / готово / ошибка», текст вопроса, звук.</td>
+  <td>nsyll, Codenotch, AI Monitor, Clawdmeter</td>
+  <td>Хуки на Mac, хост-приложение, BLE-протокол</td>
+  <td class="n">M–L</td>
+  <td>только чёрно-белая панель</td>
+</tr>
+<tr>
+  <td><b>Событие «окно сбросилось» / «лимит снят»</b></td>
+  <td>Внеплановый запрос и перерисовка ровно в <code>resets_at</code> (с небольшим разбросом), короткий сигнал. Иначе после сброса до следующего цикла на экране висят старые проценты.</td>
+  <td>Codenotch (опрос сразу при смене окна), nsyll (сигнал «limit lifted»)</td>
+  <td>Таймер по <code>resets_at</code></td>
+  <td class="n">S</td>
+  <td>хорошо</td>
+</tr>
+<tr>
+  <td><b>Пороговые алерты один раз на пересечение</b></td>
+  <td>80 / 90 / 100 %, без повторов на каждый цикл; у нас сейчас красный с 90 %.</td>
+  <td>Codenotch (80 и 100 %), dennislwy (порог 50–99 %), LimitBuddy (янтарь, красный), CodexBar</td>
+  <td>Хранить «уже сигналили» в NVS</td>
+  <td class="n">S</td>
+  <td>да (плюс звук)</td>
+</tr>
+<tr>
+  <td><b>Подсветка изменившейся строки</b></td>
+  <td>Вместо переключения окон (AI Monitor): строка, где расход вырос минимум на 5 п.п. или пересёк порог, на один цикл получает инверсный заголовок.</td>
+  <td>AI Monitor (правила окна), esp32-claude (приоритеты состояний)</td>
+  <td>Сравнение со снимком прошлого цикла</td>
+  <td class="n">S–M</td>
+  <td>да</td>
+</tr>
+<tr>
+  <td><b>Ночная пауза</b></td>
+  <td>В заданные часы не опрашивать и не перерисовывать; заодно меньше шансов на 429 и износа панели.</td>
+  <td>dennislwy (Pause Hours), RockBase (окно сна)</td>
+  <td>Настройка в портале</td>
+  <td class="n">S</td>
+  <td>да</td>
+</tr>
+<tr>
+  <td><b>Возраст данных, а не нули</b></td>
+  <td>«Данные 47 мин назад», при обрыве последний кадр остаётся; нули не рисуются.</td>
+  <td>esp32-claude, iauso, codex-usage-desk-display</td>
+  <td>—</td>
+  <td class="n">XS</td>
+  <td>у нас уже есть «cached» и время в подвале</td>
+</tr>
+<tr>
+  <td><b>Экран ошибки с причиной и временем следующей попытки</b></td>
+  <td>«429, следующая попытка в 14:20», «токен истёк, зайдите в портал».</td>
+  <td>lmarzen/esp32-weather-epd (причина ошибки на экране)</td>
+  <td>Хранить время следующей попытки</td>
+  <td class="n">S</td>
+  <td>да</td>
+</tr>
+<tr>
+  <td><b>7-дневная история и мини-график</b></td>
+  <td>Кольцо точек в LittleFS, график на второй странице; позволяет считать реальную скорость.</td>
+  <td>dennislwy (около 96 записей в сутки), LimitBuddy, CodexBar (burndown)</td>
+  <td>Пишем раз в цикл (при 20 минутах — 72 записи в сутки), беречь флеш</td>
+  <td class="n">M</td>
+  <td>да, на странице 2</td>
+</tr>
+<tr>
+  <td><b>Статистика токенов и стоимости за день</b></td>
+  <td>Токены, API-эквивалент стоимости, сессии, разбивка по моделям, стрик, стрелка тренда.</td>
+  <td>trmnl-claude, ccusage, Clawdmeter (usage by surface)</td>
+  <td>Читать логи на хосте, плата только показывает</td>
+  <td class="n">M (хост)</td>
+  <td>да, страница 2</td>
+</tr>
+<tr>
+  <td><b>Больше провайдеров: Cursor, Copilot, Gemini</b></td>
+  <td>Универсальные строки «название, процент, сброс».</td>
+  <td>AI Monitor (через CLI CodexBar), CodexBar (около 100 провайдеров), LimitBuddy</td>
+  <td>Источник — на хосте, а не на плате. e-paper-проектов с Cursor и Copilot я не нашёл</td>
+  <td class="n">M (хост)</td>
+  <td>да, как карточки</td>
+</tr>
+<tr>
+  <td><b>Удалённый просмотр</b></td>
+  <td>Кадр с платы по HTTP (<code>/screenshot.bmp</code>), телефон по QR в локальной сети, сенсоры HA.</td>
+  <td>echo-cool, Codenotch</td>
+  <td>У нас уже есть дамп кадра через serial в отладочной сборке</td>
+  <td class="n">S–M</td>
+  <td>да</td>
+</tr>
+<tr>
+  <td><b>Ступенчатое поведение при разряде батареи</b></td>
+  <td>3.20 В — ошибка и стоп; 3.10 В — сон 30 минут; 3.00 В — сон 120 минут; ниже — гибернация.</td>
+  <td>lmarzen/esp32-weather-epd, nsyll (10 % и 3 %)</td>
+  <td>Только если питаете от аккумулятора</td>
+  <td class="n">S</td>
+  <td>да</td>
+</tr>
+<tr>
+  <td><b>«Настроение» и маскот</b></td>
+  <td>Персонаж реагирует на модель, усилие и остаток: на 85 % клюёт носом, на 100 % ложится спать.</td>
+  <td>esp32-claude, Clawdmeter, LimitBuddy, ai-desk-display</td>
+  <td>Рисунки; анимации — LVGL на LCD</td>
+  <td class="n">S–M (статичная пиктограмма), L (анимации)</td>
+  <td>только статичная пиктограмма</td>
+</tr>
+<tr>
+  <td><b>Несколько аккаунтов</b></td>
+  <td>Две карточки, экран переключается на проблемный.</td>
+  <td>dennislwy, Codenotch, CodexBar</td>
+  <td>Второй набор токенов</td>
+  <td class="n">M</td>
+  <td>да, но не нужно</td>
+</tr>
+<tr>
+  <td><b>Серые 4 уровня</b></td>
+  <td>Реальные серые вместо дизера. См. раздел 5: для вашей панели не проверено.</td>
+  <td>Библиотека GxEPD2_4G</td>
+  <td>Порт драйвера под вашу панель</td>
+  <td class="n">L</td>
+  <td>только чёрно-белая; на трёхцветной нет</td>
+</tr>
+</tbody></table></div>
+
+<!-- ============================================================ 5 -->
+<h2 id="render">5. Рендер и железо</h2>
+<div class="tw"><table>
+<thead><tr><th>Тема</th><th>Что нашёл</th><th>Что это значит для нас</th></tr></thead>
+<tbody>
+<tr>
+  <td><b>Частичное обновление и призраки</b></td>
+  <td>robominds (CrowPanel 4.2″): partial около 0.6 с, full около 3.1 с, полный refresh каждые 30 обновлений. codex-usage-desk-display: полный cleanup после каждых 24 partial. По коду GxEPD2 класс <code>GxEPD2_420_GYE042A87</code> объявляет быстрый partial (около 400 мс) и полный (1200 мс); в заголовке указано «похожая панель GDEY042T81» <span class="tag dark">прочитано</span>: <a href="https://github.com/ZinggJM/GxEPD2/blob/master/src/other/GxEPD2_420_GYE042A87.h">GxEPD2_420_GYE042A87.h</a>.</td>
+  <td>У нас счётчик <code>PARTIALS_BEFORE_FULL = 20</code> — в той же зоне, что у других. Разница в другом: на коммите <code>4a3905a</code> <code>main.cpp</code> вызывает <code>renderValues()</code> и после опроса по прокси, и после каждой BLE-посылки (<code>LinkEvent::Data</code>), без сравнения с предыдущим кадром. Чем чаще Agent Meter шлёт данные, тем чаще перерисовывается экран. Для трёхцветной панели с полным обновлением около 25 с это самый дорогой пробел.</td>
+</tr>
+<tr>
+  <td><b>Серые уровни</b></td>
+  <td>В основной библиотеке GxEPD2 класса для 4 серых уровней на 4.2″ нет (проверил дерево репозитория). Это отдельная библиотека <a href="https://github.com/ZinggJM/GxEPD2_4G">GxEPD2_4G</a> (55★, последний push 2025-03, лицензия в метаданных не указана): среди 4.2″ в ней только <code>GDEY042T81</code> (SSD1683, 400×300). Good Display для этой панели заявляет 4 серых за около 2 с, <a href="https://www.good-display.com/product/386.html">страница панели</a> <span class="tag">сводка поиска</span>. В README GxEPD2_4G: 4 серых уровня «можно использовать вместо дифференциального обновления».</td>
+  <td>Ваша чёрно-белая панель <code>GYE042A87</code> на том же контроллере SSD1683, но в GxEPD2_4G её нет, значит, 4 серых там — работа по портированию с риском. На трёхцветной панели серых нет. Пока нормальный дизер Байера — разумный выбор; в прочитанных проектах я не встретил ни одного, кто описывал бы дизеринг на 1-битной панели.</td>
+</tr>
+<tr>
+  <td><b>Шрифты</b></td>
+  <td>lmarzen/esp32-weather-epd: шрифты, сконвертированные для Adafruit GFX (Lato, Montserrat, Open Sans, Roboto и др.). RockBase-дашборд: растровые FreeSans от 4 до 48 pt. Clawdmeter-epaper: шрифты LVGL с ручными правками формата.</td>
+  <td>У нас U8g2 с растровыми шрифтами (hinted, без сглаживания) на 1-битной панели: это хороший выбор, лучше документированного у остальных. Не вижу, что тут подсматривать.</td>
+</tr>
+<tr>
+  <td><b>Питание и сон</b></td>
+  <td><a href="https://github.com/lmarzen/esp32-weather-epd">esp32-weather-epd</a> (6.4k★, GPL-3.0, только панели 7.5″ и 7.3″): около 14 µА во сне, около 83 мА на 15 секунд обновления, заявлено 6–12 месяцев на 5000 мА·ч при обновлении раз в 30 минут. echo-cool на CrowPanel 4.2″ работает без сна, всегда в Wi-Fi.</td>
+  <td>Ваша плата всегда в Wi-Fi, ближе к echo-cool. Если когда-нибудь перейдёте на питание от батареи, схему сна и порогов лучше брать у lmarzen.</td>
+</tr>
+<tr>
+  <td><b>Серверный рендер</b></td>
+  <td><a href="https://github.com/usetrmnl/trmnl-firmware">TRMNL firmware</a> (1.2k★, GPL-3.0) и <a href="https://github.com/fatihak/InkyPi">InkyPi</a> (4.3k★, GPL-3.0): кадр или картинка готовится на сервере, устройство только показывает. Подробно не вскрывал.</td>
+  <td>Для вашей схемы с хост-приложением это второй вариант: Mac рисует PNG, плата показывает. Но вы уже имеете рабочий рендер на плате и режим предпросмотра, так что выигрыша немного.</td>
+</tr>
+</tbody></table></div>
+
+<!-- ============================================================ 6 -->
+<h2 id="synthesis">6. Выводы</h2>
+
+<h3 id="same">6.1 Делает ли кто-то то же самое, и как мы выглядим</h3>
+<p><b>Нет.</b> Сочетания «Claude и Codex вместе, строки по моделям, 400×300 e-paper, всё на плате через прокси» я ни у кого не видел. Ближе всего:</p>
+<ul>
+  <li><a href="https://github.com/SDanker/iauso">iauso</a> — тот же набор провайдеров на e-paper, но малая панель, Raspberry Pi, нет обновления токенов и нет проверки на живом железе.</li>
+  <li>Семейство BLE и USB (<a href="https://github.com/nsyll/clawdometer-eink">clawdometer-eink</a>, <a href="https://github.com/steven95421/clawdmeter-epaper">clawdmeter-epaper</a>, <a href="https://github.com/LindsayB610/codex-usage-desk-display">codex-usage-desk-display</a>) — только один провайдер или только Claude, панели 1.54″–2.13″.</li>
+  <li><a href="https://github.com/HermannBjorgvin/Clawdmeter">Clawdmeter</a> — масштаб и аудитория (2.4k★), но e-paper у него «экспериментальный».</li>
+</ul>
+<p><b>Где мы впереди:</b> размер и вёрстка (строки по моделям, три темы, смысл красного «с 90 %»), портал настроек, OTA, конвейер предпросмотра без панели (дамп кадра в PNG), разбор двух вариантов панели. <b>Наравне с лучшими:</b> управление настройками платы с Mac по BLE (так же устроена страница «Device» у Clawdmeter). <b>Где отстаём:</b> нет статуса агента, нет отметки темпа, нет отложенного backoff (в режиме прокси; в режиме Mac он должен жить в Agent Meter), нет пропуска лишних перерисовок.</p>
+<p><b>Что делает нас нетипичными, а не лучшими:</b> режим прокси с токенами и ротацией на самой плате. Остальные в выборке этого избегают, кроме dennislwy, который использует setup-токены (ротации refresh-токена в его README нет). Режим Mac по BLE от коммита <code>4a3905a</code> устроен так же, как у большинства. Наблюдения по коду на этом коммите:</p>
+<ul>
+  <li><code>quota.cpp</code>, режим прокси, обработка 429 для Claude и Codex: ставится состояние «throttled», дальше ждём обычный цикл. Отложенного дедлайна нет, поэтому перезагрузка платы или удержание USER («fetch now») могут снова бить по лимиту. В режиме Mac протокол уже умеет передавать состояние <code>limit</code>, так что дедлайн можно держать на стороне Agent Meter.</li>
+  <li><code>quota.cpp</code>, разбор Codex: <code>primary_window</code> всегда записывается в session, а <code>secondary_window</code> в week. Это та самая позиционная привязка, которая ломается на плане, где primary уже недельное. Проверьте то же самое на стороне Agent Meter, где для Codex формируются поля <code>session</code> и <code>week</code>.</li>
+  <li>README говорит «ограничение — на access-токен». Это опирается на один непроверенный комментарий в <a href="https://github.com/anthropics/claude-code/issues/31637">claude-code#31637</a>. Измерения в <a href="https://github.com/realiti4/claude-swap/issues/220">claude-swap#220</a> указывают на аккаунт. Формулировку стоит поправить.</li>
+</ul>
+
+<h3 id="ranked">6.2 Что добавить, по порядку</h3>
+<p>Ранжирование — по соотношению пользы и усилия. Колонка «Плата» — вмещается ли на 400×300 e-paper. Пометка «нужен хост» значит, что потребуется работа и в Agent Meter, не только в прошивке.</p>
+<div class="tw"><table>
+<thead><tr><th class="n">#</th><th>Что</th><th>Зачем (одной строкой)</th><th class="n">Усилие</th><th>Откуда взять</th><th>Плата</th></tr></thead>
+<tbody>
+<tr><td class="n">1</td><td><b>Отложенный backoff на 429 и минимальный интервал между запросами</b>, включая «fetch now» (в режиме Mac — в Agent Meter)</td><td>Перезагрузка и ручное нажатие не должны бить по общему лимиту; дедлайн сохраняется и показывается на экране ошибки.</td><td class="n">S</td><td>Codenotch (60 с → 15 мин, на диск), iauso (минимум 180 с)</td><td>да</td></tr>
+<tr><td class="n">2</td><td><b>Окна Codex выбирать по длительности</b>, а не по primary/secondary</td><td>На другом плане можно показывать неделю под подписью «сессия».</td><td class="n">XS</td><td>pi-codex-usage, codex-usage-desk-display</td><td>да</td></tr>
+<tr><td class="n">3</td><td><b>Отметка темпа на полосе и слово «хватит / не хватит»</b></td><td>Главный ответ «успею ли до сброса»; считается из того, что уже приходит.</td><td class="n">S</td><td>CodexBar, LimitBuddy, ha-clawdmeter</td><td>да</td></tr>
+<tr><td class="n">4</td><td><b>Запрос и перерисовка ровно в момент сброса окна</b>, плюс «лимит снят»</td><td>Иначе после сброса экран до 20 минут показывает старые проценты.</td><td class="n">S</td><td>Codenotch, nsyll</td><td>да</td></tr>
+<tr><td class="n">5</td><td><b>Не перерисовывать, если ничего не изменилось</b> (хеш содержимого) и обслуживающий полный refresh раз в сутки</td><td>Трёхцветная панель тратит около 25 с на каждую перерисовку, а сейчас каждая BLE-посылка вызывает перерисовку; износ и мерцание зря.</td><td class="n">S</td><td>robominds, iauso</td><td>да</td></tr>
+<tr><td class="n">6</td><td><b>Статус агента по хукам</b> («работает / ждёт вас / готово / ошибка») со звуком</td><td>Самая весомая «бадди»-функция; ради неё и нужен постоянный монитор на столе.</td><td class="n">M–L</td><td>nsyll, Codenotch, AI Monitor; события — <a href="https://code.claude.com/docs/en/hooks">документация хуков</a></td><td>только чёрно-белая; нужен хост</td></tr>
+<tr><td class="n">7</td><td><b>Алерты один раз на пересечение порога</b> (80 / 90 / 100 %)</td><td>Сейчас красный только с 90 %; сигнал без повторов полезнее постоянной подсветки.</td><td class="n">S</td><td>Codenotch, dennislwy</td><td>да</td></tr>
+<tr><td class="n">8</td><td><b>Ночная пауза</b> в портале</td><td>Меньше запросов и перерисовок, меньше риска 429.</td><td class="n">S</td><td>dennislwy, RockBase</td><td>да</td></tr>
+<tr><td class="n">9</td><td><b>Экран ошибки с причиной и временем следующей попытки</b></td><td>Сейчас «cached» и «sign in again» не говорят, когда ждать следующей попытки.</td><td class="n">S</td><td>lmarzen</td><td>да</td></tr>
+<tr><td class="n">10</td><td><b>Сверить уже написанный BLE-протокол v1 с практикой других</b>: токенов в нём нет, и это уже правильно; стоит добавить подтверждение «показано» и возраст данных от Mac</td><td>Запись квот идёт «с ответом» (подтверждение на уровне BLE есть), но не подтверждение отрисовки, как у codex-usage-desk-display; устаревание данных плата считает сама, по таймеру в три интервала.</td><td class="n">S</td><td>codex-usage-desk-display</td><td>—</td></tr>
+<tr><td class="n">11</td><td><b>Подсветка изменившейся строки</b> вместо переключения окон</td><td>Показывает, что именно сдвинулось, не меняя фиксированной вёрстки.</td><td class="n">S–M</td><td>AI Monitor</td><td>да</td></tr>
+<tr><td class="n">12</td><td><b>7-дневная история и мини-график</b> на странице 2</td><td>Позволяет считать реальную скорость расхода вместо «равномерной».</td><td class="n">M</td><td>dennislwy, LimitBuddy</td><td>да</td></tr>
+<tr><td class="n">13</td><td><b>Статистика токенов и стоимости</b> на странице 2; <b>другие провайдеры</b> (Cursor, Copilot, Gemini) через CLI на хосте</td><td>Расширяет экран за пределы Claude и Codex без новых секретов на плате.</td><td class="n">M (хост)</td><td>trmnl-claude, CodexBar, AI Monitor</td><td>да</td></tr>
+<tr><td class="n">14</td><td><b>Кадр с платы по HTTP</b> (<code>/screenshot.bmp</code>)</td><td>Проверка того, что реально на экране, удалённо.</td><td class="n">S–M</td><td>echo-cool</td><td>да</td></tr>
+<tr><td class="n">15</td><td><b>Ступенчатое поведение при разряде</b></td><td>Нужно, только если питаете от аккумулятора.</td><td class="n">S</td><td>lmarzen, nsyll</td><td>да</td></tr>
+<tr><td class="n">16</td><td><b>Статичное «настроение»</b> в углу (бодр / сонный / в кровати)</td><td>Дешёвая «личность» без анимаций.</td><td class="n">S–M</td><td>esp32-claude</td><td>да</td></tr>
+</tbody></table></div>
+<div class="box"><p><b>Не стоит делать сейчас:</b> анимированных маскотов и сцены (на e-paper нет смысла), второй аккаунт, 4 серых уровня на вашей панели (риск и неподтверждённая поддержка), серверный рендер кадров (у вас уже рабочий рендер и режим предпросмотра).</p></div>
+
+<h3 id="ratelimit">6.3 Лимиты и токены: кто решил лучше</h3>
+<p><b>Лимиты.</b></p>
+<ul>
+  <li><b>Лучше всего у Codenotch:</b> backoff с удвоением и потолком, дедлайн на диске, <code>Retry-After: 0</code> как минимум, адаптивный опрос (быстрее при работе, медленнее в простое, сразу при сбросе окна), а главное — <b>нулевые запросы</b>, если свежий кеш Claude Desktop уже есть на диске. Вторым источником идёт <code>/usage</code> через бинарник <code>claude</code>.</li>
+  <li><b>iauso:</b> отложенный backoff, минимум 180 с, один сервер на несколько экранов.</li>
+  <li><b>Если нужны только session и week:</b> минимальный запрос с заголовками (стабильнее эндпойнта, работает и при 429), либо statusLine без запросов, но только пока открыта сессия.</li>
+  <li><b>Что на самом деле жжёт бюджет.</b> Измерения <a href="https://github.com/realiti4/claude-swap/issues/220">claude-swap#220</a> дают порядок 28–30 запросов в час на аккаунт, а автор позже связал блокировку со своим виджетом, который опрашивал каждые 2 секунды. Это отдельный вывод: у вас 20 минут — это 3 запроса в час, самый консервативный интервал из прочитанного (для сравнения: HA-интеграции — 5 минут, LimitBuddy — не чаще 5, Codenotch — 30 с при работе). Значит, если 429 всё равно приходят, виновник, вероятно, другой клиент на этом же аккаунте. Это моё предположение, не подтверждённое измерением на вашем аккаунте.</li>
+</ul>
+<p><b>Токены.</b></p>
+<ul>
+  <li><b>Своя OAuth-сессия на потребителя</b> (<a href="https://github.com/stevengoossensB/ha-claude-usage">ha-claude-usage</a>, <a href="https://github.com/corgan2222/ha-clawdmeter">ha-clawdmeter</a>): логин по ссылке в браузере, код вставляется в форму. Это отдельная «семья» токенов, она не ломает логин Claude Code. Если токены на плате скопированы из Mac, то ротация на плате инвалидирует Mac — об этом пишет GiGurra в <a href="https://github.com/anthropics/claude-code/issues/31637">claude-code#31637</a>. Для режима прокси это значит: предлагать собственный вход, а не вставку скопированных токенов. То же относится к Agent Meter: если он сам обновляет токен, прочитанный из Keychain Claude Code, ротация может сломать вход самого Claude Code; безопаснее не обновлять самому (как LimitBuddy и iauso) или завести отдельную сессию. С оговоркой по ToS (6.4).</li>
+  <li><b>Только чтение, без обновления</b> (iauso, Codenotch для Codex, LimitBuddy): не трогать токены, экран просто просит войти заново. Самый безопасный вариант для вас — переложить обновление на сам <code>claude</code> и <code>codex</code> на Mac.</li>
+  <li><b>Codex без токенов вообще:</b> <code>codex app-server</code> на Mac, как у codex-usage-desk-display.</li>
+  <li><b>Cloudflare 403 при обновлении</b> с нестандартного отпечатка (<a href="https://github.com/anthropics/claude-code/issues/47754">claude-code#47754</a>): никто не решил, тема закрыта без ответа Anthropic. Обновление силами родного <code>claude</code> на Mac эту проблему обходит.</li>
+</ul>
+<div class="box key"><p><b>Что это даёт Agent Meter.</b> Режим Mac по BLE уже в дереве: плата принимает готовые проценты и время сброса. Остаётся выстроить опрос на стороне Mac: один клиент, кеш, отложенный backoff, источники по очереди — кеш Claude Desktop (если в нём есть модели; не проверено), затем <code>/api/oauth/usage</code>, затем <code>/usage</code>; для Codex — <code>app-server</code>. Новое по сравнению с планом: (1) строки по моделям держатся только на эндпойнте, <code>/usage</code> и, возможно, кеше Desktop; (2) у Codex можно совсем без токенов; (3) единый опрос снимает конкуренцию за общий бюджет; (4) состояние 429 можно передавать на плату полем <code>state=limit</code>, которое протокол уже умеет.</p></div>
+
+<h3 id="tos">6.4 Лицензии и условия использования</h3>
+<div class="box warn">
+<p><b>Anthropic.</b> Страница <a href="https://code.claude.com/docs/en/legal-and-compliance">Legal and compliance</a> (открыта 15.11.2026) говорит: OAuth предназначен для покупателей подписок и для обычного использования Claude Code и «нативных приложений Anthropic». Сторонним разработчикам запрещено предлагать вход через Claude.ai и пускать запросы через подписку пользователей. Отдельно запрещено собирать, хранить и посредничать с учётными данными или токенами Claude.ai. Anthropic оставляет за собой право пресекать это без предупреждения.</p>
+<p><a href="https://www.anthropic.com/legal/consumer-terms">Consumer Terms</a>: раздел 3, пункт 7 запрещает автоматизированный доступ через бота или скрипт, кроме случаев API-ключа или явного разрешения; раздел 2 запрещает делиться данными входа; раздел 13 разрешает приостановить доступ без уведомления, а возврата денег за подписку при существенном нарушении нет.</p>
+</div>
+<ul>
+  <li><b>Что это значит для нас.</b> Формулировки адресованы «сторонним разработчикам» и «от имени пользователей». Личная плата на вашем столе с вашей же подпиской под них не подпадает прямо, но и не разрешена прямо: это серая зона. Хранение refresh-токена в NVS платы и его ротация клиентским идентификатором Claude Code — как раз та часть, которую легче всего прочитать как «хранение учётных данных». Заголовок <code>User-Agent: claude-code/2.1.0</code>, который режим прокси шлёт на эндпойнт (<code>CLAUDE_UA</code> в <code>quota.cpp</code>), — часть обхода, которую в споре труднее защищать.</li>
+  <li><b>Риск реален, но он про вашу подписку, а не про код:</b> худший исход — блокировка токена или приостановка аккаунта. Об уже идущей технической блокировке сторонних клиентов пишут the-usage-monitor и пересказы в прессе (с января 2026, подтверждение документации — 19 февраля) <span class="tag">сводка поиска</span>: <a href="https://winbuzzer.com/2026/02/19/anthropic-bans-claude-subscription-oauth-in-third-party-apps-xcxwbn/">Winbuzzer</a>. Первичного текста о датах я не нашёл.</li>
+  <li><b>Единственный путь, который Anthropic документирует сам:</b> поле <code>rate_limits</code> в statusLine (<a href="https://code.claude.com/docs/en/statusline">документация</a>), то есть данные идут из нетронутого клиента. Он даёт только session и week, и только пока открыта сессия. Ваши строки по моделям держатся на недокументированных источниках, то есть именно они находятся в серой зоне.</li>
+  <li><b>Авторы сами предупреждают:</b> the-usage-monitor пишет, что приложение «не соответствует Consumer ToS» и только для личного использования, claude-usage-monitor (jasonChen0604) принципиально берёт только statusLine. Что именно Anthropic «явно запрещает» про этот эндпойнт, как утверждает последний, я по первоисточнику не проверил: на странице Legal про сам эндпойнт нет ни слова.</li>
+  <li><b>Практичный минимум:</b> держать репозиторий приватным (он такой) и не распространять прошивку с зашитым клиентским идентификатором и логикой обновления. Режим Mac по BLE убирает токены с платы, но не снимает вопроса целиком: Agent Meter читает токен Claude Code из Keychain и ходит на тот же недокументированный эндпойнт. Снизить риск дальше можно схемой «Mac читает через родной <code>claude</code>, statusLine и <code>app-server</code>»; ценой будет то, что statusLine даёт только session и week, а строки по моделям придётся брать через <code>claude /usage</code> (родной бинарник, но разбор интерфейса).</li>
+</ul>
+<p><b>OpenAI и Codex.</b></p>
+<ul>
+  <li>Первичного текста условий OpenAI я не получил: страницы политик не открылись. Всё ниже — из пересказов <span class="tag">сводка поиска</span>.</li>
+  <li>С 29 сентября 2026 есть официальная программа «Sign in with ChatGPT» для сторонних инструментов (<a href="https://thenewstack.io/sign-in-with-chatgpt/">The New Stack</a>). Она про использование подписки для вывода моделей, а не про чтение остатка.</li>
+  <li>Повторное использование OAuth-клиента Codex CLI и <code>auth.json</code> — серая зона; про сторонние клиенты есть высказывания сотрудников, что поддерживаются открытые проекты и партнёры (<a href="https://dbggr.dev/articles/claude-chatgpt-subscription-coding-tools/">разбор Dbggr</a>, <a href="https://github.com/openai/codex/discussions/8338">обсуждение openai/codex#8338</a>). Условия планов ChatGPT, по пересказу <a href="https://proxyllm.ai/blog/openai-account-ban-risks-third-party-tools">ProxyLLM</a>, запрещают программное извлечение данных и общий доступ к учётным данным.</li>
+  <li>Наименее серый путь для Codex — локальный <code>codex app-server</code>: это родной бинарник, токены на плату не попадают. Ещё одно подтверждение: Codenotch никогда не копирует, не обновляет и не пишет токены Codex.</li>
+</ul>
+<p><b>Лицензии кода.</b> Брать код можно из проектов под MIT: iauso, nsyll, LimitBuddy, AI Monitor, Codenotch, CodexBar, ha-claude-usage, robominds, RockBase-дашборд. <b>GPL-3.0:</b> trmnl-claude, esp32-weather-epd, TRMNL firmware, InkyPi, а также GxEPD2, которую вы уже используете как библиотеку; для приватного репозитория это ничего не меняет, но обязательства появятся при распространении прошивок. <b>Без лицензии</b> (по умолчанию все права за автором): Clawdmeter, clawdmeter-epaper, esp32-claude, the-usage-monitor — смотреть можно, копировать нельзя; в Clawdmeter ещё и чужие шрифты и маскот. У codex-usage-desk-display лицензия не определена. Идеи и форматы данных копировать можно. Названия и логотипы Anthropic по условиям на странице Legal нельзя использовать в названии продукта и в своём логотипе. И ещё: вендорные файлы Elecrow автор codex-usage-desk-display скачивает по хешу, а не коммитит, потому что у них нет лицензии на распространение; проверьте, что лицензия вендора на файлы в вашей папке <code>vendor-ref/</code> позволяет её публикацию, если репозиторий когда-нибудь станет публичным.</p>
+
+<!-- ============================================================ 7 -->
+<h2 id="gaps">7. Что не проверено</h2>
+<ul>
+  <li><b>Как собирал.</b> Поиск по сети (инструмент отдаёт результаты только из США) и чтение README и документов. Страницы читала модель-помощник и пересказывала, поэтому детали из README могли исказиться. Звёзды, лицензии и даты — из GitHub API на 15.11.2026; часть запросов в конце упёрлась в лимит API без ключа, поэтому у нескольких репозиториев данных нет.</li>
+  <li><b>Не запускал ничего с вашими учётными данными</b> и не делал запросов к <code>api.anthropic.com</code> или <code>chatgpt.com</code>: ни эндпойнт, ни минимальный запрос с заголовками, ни <code>app-server</code> не проверялись. Описание их поведения — со слов issue и README.</li>
+  <li><b>Про ваш код.</b> Читал коммит <code>4a3905a</code>: <code>quota.cpp</code>, <code>link.cpp</code>, <code>main.cpp</code> и <code>platformio.ini</code>. Код Agent Meter (Swift) не смотрел, поэтому то, что он уже отдаёт поля по моделям, я беру из сообщения коммита. Рабочее дерево содержит незакоммиченные правки <code>ui.cpp</code>, <code>ui.h</code> и <code>scripts/preview.py</code>, они не мои и в обзоре не учтены.</li>
+  <li><b>Не открывал:</b> ClaudeBar, Claude-Code-Usage-Monitor, документацию хуков Codex, TRMNL firmware и InkyPi изнутри, ESPHome-компонент, протокол BLE у Clawdmeter. Страница Adafruit про Clawdmeter отдала 403.</li>
+  <li><b>Недоступны:</b> репозиторий WGeeBalti/ESP32_DesktopHUD (404) и CYD-Claude-Usage-Limits у Krusnix (репозиторий не найден). Из них взято только то, что было в результатах поиска.</li>
+  <li><b>Возможны пробелы в охвате:</b> поиск мог пропустить закрытые, свежие или не на английском языке проекты, особенно квота-мониторы под Cursor, Copilot и Gemini на e-paper.</li>
+  <li><b>Не проверено на железе:</b> поддержка 4 серых уровней на вашей панели <code>GYE042A87</code>; наличие и подключение динамика на вашей плате в реальности (только документация вендора); состав полей в кеше Claude Desktop.</li>
+  <li><b>Сроки и нормативные тексты</b> про блокировки с января 2026 — из пересказов, не из первичных документов Anthropic. Перед решениями по ToS стоит перечитать актуальные страницы.</li>
+</ul>
+
+</main>
+</body>
+</html>

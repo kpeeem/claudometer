@@ -48,6 +48,15 @@ After the first flash you never need the cable again:
 ./scripts/ota.sh
 ```
 
+Two things make or break that, both learned the hard way:
+
+- The partition table must have **two** app slots. `huge_app.csv` has only `app0`, so there is
+  nowhere to write an incoming image and the board calls `abort()` a moment after the transfer
+  starts — the host just sees a stall at 0%. This project uses `default_16MB.csv`, which gives two
+  6.5 MB slots on the board's 16 MB flash. Changing the partition table needs one USB flash.
+- The Mac firewall must let the uploader accept the inbound connection the board makes back to it.
+  Symptoms otherwise are `No response from device`, or `Authenticating...OK` followed by a stall.
+
 ## What is on screen
 
 | | |

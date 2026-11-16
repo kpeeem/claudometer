@@ -1,0 +1,388 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Откуда расширение Claude Code для VS Code берёт квоты</title><style>
+:root{--ink:#1f2328;--mute:#59636e;--line:#d0d7de;--bg:#ffffff;--soft:#f6f8fa;--ok:#1a7f4b;--warn:#9a6700;--bad:#b42318}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:40px 24px 96px}
+h1{font-size:30px;line-height:1.25;margin:0 0 8px;font-weight:650}
+h2{font-size:22px;margin:56px 0 12px;padding-top:8px;border-top:1px solid var(--line);font-weight:650}
+h3{font-size:17px;margin:32px 0 8px;font-weight:650}
+p{margin:10px 0}
+a{color:#0550ae;text-decoration:none}
+a:hover{text-decoration:underline}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
+code{background:var(--soft);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin:0;white-space:pre-wrap;word-break:break-all;line-height:1.5}
+pre code{background:none;border:0;padding:0}
+.lead{color:var(--mute);margin:0 0 24px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--mute);font-size:14px;margin:0 0 28px}
+.box{border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin:20px 0;background:var(--bg)}
+.box.key{background:var(--soft)}
+.box h3{margin-top:0}
+.box ul,.box ol{margin:8px 0 0;padding-left:22px}
+.box li{margin:6px 0}
+nav.toc{border:1px solid var(--line);border-radius:8px;padding:14px 20px;margin:24px 0;background:var(--soft)}
+nav.toc ol{margin:6px 0 0;padding-left:22px;columns:2;column-gap:32px}
+nav.toc li{margin:3px 0;break-inside:avoid}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft);font-weight:600}
+td code{white-space:nowrap}
+td code.wrap{white-space:normal;word-break:break-all}
+figure.q{margin:14px 0}
+figure.q figcaption{font-size:12.5px;color:var(--mute);margin:0 0 4px}
+figure.q figcaption b{color:var(--ink)}
+.tag{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:10px;padding:0 8px;margin-right:4px;color:var(--mute);white-space:nowrap}
+.tag.ok{color:var(--ok);border-color:var(--ok)}
+.tag.warn{color:var(--warn);border-color:var(--warn)}
+.tag.bad{color:var(--bad);border-color:var(--bad)}
+.note{color:var(--mute);font-size:14px}
+svg{display:block;width:100%;height:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:#fff}
+@media (max-width:760px){nav.toc ol{columns:1}}
+</style></head><body><main>
+<h1>Откуда расширение Claude Code для VS Code берёт квоты</h1>
+<p class="lead">Разбор установленного расширения и его встроенного бинаря: кто и как часто ходит за лимитами, что делает с 429 и что из этого взять для платы.</p>
+<div class="meta"><span>Расширение: <code>anthropic.claude-code-2.1.314-darwin-arm64</code></span><span>Дата разбора: 2026-11-16</span><span>Режим: только чтение, <code>claude</code> не запускался, токены не читались</span></div>
+<nav class="toc"><b>Оглавление</b><ol>
+<li><a href="#summary">Короткий вывод</a></li>
+<li><a href="#answers">Ответы на пять вопросов</a></li>
+<li><a href="#scheme">Схема потока</a></li>
+<li><a href="#q1">1. Прямой вызов эндпоинта или нет</a></li>
+<li><a href="#q2">2. Опрос: интервал и триггеры</a></li>
+<li><a href="#q3">3. Что с 429</a></li>
+<li><a href="#q4">4. Кэш на диске</a></li>
+<li><a href="#q5">5. Токен</a></li>
+<li><a href="#machine">Что видно на этой машине</a></li>
+<li><a href="#sources">Локальные источники, которые можно читать</a></li>
+<li><a href="#todo">Что делать плате</a></li>
+<li><a href="#live">Чтение из запущенного Claude без сети</a></li>
+<li><a href="#limits">Что не проверено</a></li>
+<li><a href="#verify">Как перепроверить</a></li>
+</ol></nav>
+<h2 id="summary">Короткий вывод</h2>
+<div class="box key"><ul>
+<li><b>Расширение не ходит на <code>/api/oauth/usage</code> само.</b> В <code>extension.js</code> и <code>webview/index.js</code> такой строки нет ни разу. Из <code>/api/oauth/*</code> оно трогает только <code>/api/oauth/profile</code> (UUID организации) и обновление токена.</li>
+<li><b>Все числа ему отдаёт дочерний процесс <code>claude</code></b> (тот же бинарь 2.1.314 из <code>resources/native-binary/claude</code>). Путь первый: события <code>rate_limit_event</code>, собранные из заголовков <code>anthropic-ratelimit-unified-*</code> в обычных ответах <code>/v1/messages</code>. Они приходят на каждый запрос и ничего не стоят. Путь второй: управляющий запрос <code>get_usage</code> — на первом запуске панели, при входе и при смене аккаунта.</li>
+<li><b>Таймера нет.</b> Ни в расширении, ни в webview ни один <code>setInterval</code> не относится к квотам. Обновление идёт по событиям.</li>
+<li><b>От 429 его защищает не отсутствие эндпоинта, а редкость обращений и дисциплина внутри CLI:</b> снимок на 60 с, один запрос в полёте, таймаут 5 с, память о 429 на токен (<code>retry-after</code> или 5 минут, потолок 1 час), запасной ответ из заголовков или из сохранённого снимка.</li>
+<li><b>Токен общий с CLI.</b> Расширение читает и обновляет тот же элемент Keychain <code>Claude Code-credentials</code>. Своего ключа у него нет.</li>
+<li><b>Файла «для чужих» расширение не пишет и не читает.</b> Единственный дисковый кэш — ключ <code>cachedUsageUtilization</code> в <code>~/.claude.json</code>, и на этой машине его нет.</li>
+<li><b>Готовый локальный файл на этом Mac есть, но он не от расширения:</b> <code>~/Library/Application Support/Agent Meter/claude-usage.json</code>. Его каждые 5 минут обновляет Agent Meter под отдельным входом, с временем сброса. Плате надо брать числа оттуда по BLE, а не опрашивать эндпоинт токеном Claude Code. Подробности в разделе <a href="#todo">«Что делать плате»</a>.</li>
+<li><b>Без сети вообще:</b> мод с хуком <code>session.measure</code> внутри каждого запущенного <code>claude</code> получает те же числа из заголовков, что и VS Code, и может писать их в файл. Раздел <a href="#live">«Чтение из запущенного Claude без сети»</a>.</li>
+</ul></div>
+<h2 id="answers">Ответы на пять вопросов</h2>
+<table>
+<tr><th style="width:26%">Вопрос</th><th>Ответ</th><th style="width:16%">Где смотреть</th></tr>
+<tr><td>1. Прямой вызов <code>/api/oauth/usage</code> или иначе?</td><td>Иначе. Расширение спрашивает дочерний процесс <code>claude</code> по Agent SDK. Процесс сам берёт числа из заголовков ответов и лишь изредка делает GET на эндпоинт.</td><td><a href="#q1">раздел 1</a></td></tr>
+<tr><td>2. Интервал, таймер или события?</td><td>Таймера нет. Триггеры: каждый ответ API, первый запуск панели (раз на аккаунт), вход в аккаунт, смена аккаунта в webview, явный <code>get_usage</code>. Таймаут чтения 15 с.</td><td><a href="#q2">раздел 2</a></td></tr>
+<tr><td>3. Что с 429?</td><td>В CLI: снимок 60 с, дедупликация, таймаут 5 с, один 401-повтор, память ответа 429/403 на токен (<code>retry-after</code> либо 5 мин, максимум 1 ч), запасной ответ из заголовков или из сохранённого снимка до 1 ч.</td><td><a href="#q3">раздел 3</a></td></tr>
+<tr><td>4. Кэш на диске?</td><td><code>cachedUsageUtilization</code> в <code>~/.claude.json</code> (или в <code>$CLAUDE_CONFIG_DIR/.claude.json</code>). Пишется только после успешного ответа эндпоинта, не чаще раза в 60 с. Здесь ключа нет.</td><td><a href="#q4">раздел 4</a></td></tr>
+<tr><td>5. Тот же токен, что у CLI?</td><td>Да, тот же элемент Keychain и тот же <code>claudeAiOauth</code>. Расширение само обновляет токен. Отдельный токен получается только при другом <code>CLAUDE_CONFIG_DIR</code>.</td><td><a href="#q5">раздел 5</a></td></tr>
+</table>
+<h2 id="scheme">Схема потока</h2><p>Расширение — тонкая оболочка над CLI. Всё, что связано с квотами, происходит в процессе <code>claude</code>; расширение только пересылает результат в панель.</p>
+<svg viewBox="0 0 980 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема потока данных о квотах">
+<defs>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1a7f4b"/></marker>
+<marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9a6700"/></marker>
+<marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#59636e"/></marker>
+</defs>
+<g font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" fill="#1f2328">
+<rect x="16" y="28" width="210" height="82" rx="8" fill="#f6f8fa" stroke="#d0d7de"/>
+<text x="30" y="52" font-weight="600">Webview</text>
+<text x="30" y="72" fill="#59636e">webview/index.js</text>
+<text x="30" y="92" fill="#59636e">индикатор лимитов</text>
+
+<rect x="16" y="168" width="210" height="104" rx="8" fill="#f6f8fa" stroke="#d0d7de"/>
+<text x="30" y="192" font-weight="600">Extension host</text>
+<text x="30" y="212" fill="#59636e">extension.js</text>
+<text x="30" y="232" fill="#59636e">запрашивает get_usage,</text>
+<text x="30" y="250" fill="#59636e">раздаёт числа панелям</text>
+
+<rect x="300" y="28" width="330" height="410" rx="8" fill="#ffffff" stroke="#8c959f"/>
+<text x="316" y="52" font-weight="600">Процесс claude 2.1.314</text>
+<text x="316" y="71" fill="#59636e">native-binary/claude · Agent SDK · stream-json</text>
+
+<rect x="318" y="92" width="294" height="78" rx="6" fill="#f6f8fa" stroke="#1a7f4b"/>
+<text x="332" y="114" font-weight="600" fill="#1a7f4b">Числа из заголовков</text>
+<text x="332" y="134" fill="#59636e">хранилище в памяти (rawUtilization)</text>
+<text x="332" y="152" fill="#59636e">обновляется при каждом ответе</text>
+
+<rect x="318" y="190" width="294" height="64" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+<text x="332" y="212" font-weight="600">get_usage</text>
+<text x="332" y="232" fill="#59636e">1) снимок моложе 60 с — ответ без сети</text>
+<text x="332" y="248" fill="#59636e">2) иначе GET /api/oauth/usage</text>
+
+<rect x="318" y="272" width="294" height="78" rx="6" fill="#f6f8fa" stroke="#9a6700"/>
+<text x="332" y="294" font-weight="600" fill="#9a6700">Защита от 429</text>
+<text x="332" y="314" fill="#59636e">ответ 429/403 помнится на токен:</text>
+<text x="332" y="332" fill="#59636e">retry-after или 5 мин, максимум 1 ч</text>
+
+<rect x="318" y="368" width="294" height="54" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+<text x="332" y="390" font-weight="600">Запасной ответ при ошибке</text>
+<text x="332" y="408" fill="#59636e">заголовки, иначе снимок не старше 1 ч</text>
+
+<rect x="724" y="28" width="240" height="96" rx="8" fill="#f6f8fa" stroke="#1a7f4b"/>
+<text x="738" y="52" font-weight="600" fill="#1a7f4b">api.anthropic.com</text>
+<text x="738" y="72">POST /v1/messages</text>
+<text x="738" y="92" fill="#59636e">+ пробный «quota», 1 токен</text>
+<text x="738" y="110" fill="#59636e" font-size="12">заголовки anthropic-ratelimit-unified-*</text>
+
+<rect x="724" y="196" width="240" height="72" rx="8" fill="#f6f8fa" stroke="#9a6700"/>
+<text x="738" y="220" font-weight="600" fill="#9a6700">api.anthropic.com</text>
+<text x="738" y="240">GET /api/oauth/usage</text>
+<text x="738" y="258" fill="#59636e" font-size="12">редко: старт, вход, смена аккаунта</text>
+
+<rect x="724" y="330" width="240" height="72" rx="8" fill="#f6f8fa" stroke="#d0d7de"/>
+<text x="738" y="354" font-weight="600">~/.claude.json</text>
+<text x="738" y="374" fill="#59636e">cachedUsageUtilization</text>
+<text x="738" y="392" fill="#59636e">запись не чаще раза в 60 с</text>
+
+<rect x="16" y="340" width="210" height="82" rx="8" fill="#f6f8fa" stroke="#d0d7de"/>
+<text x="30" y="364" font-weight="600">Keychain</text>
+<text x="30" y="384" fill="#59636e">Claude Code-credentials</text>
+<text x="30" y="402" fill="#59636e">один токен на всех</text>
+
+<path d="M121 168V112" stroke="#59636e" stroke-width="1.5" fill="none" marker-end="url(#ak)"/>
+<text x="130" y="144" fill="#59636e">panel_usage_update</text>
+
+<path d="M300 220H228" stroke="#59636e" stroke-width="1.5" fill="none" marker-end="url(#ak)"/>
+<text x="232" y="212" fill="#59636e" font-size="11.5">rate_limit_event</text>
+<path d="M228 244H300" stroke="#59636e" stroke-width="1.5" fill="none" marker-end="url(#ak)"/>
+<text x="232" y="262" fill="#59636e" font-size="11.5">get_usage</text>
+
+<path d="M614 131H722" stroke="#1a7f4b" stroke-width="2" fill="none" marker-start="url(#ag)" marker-end="url(#ag)"/>
+<text x="636" y="114" fill="#1a7f4b" font-size="12">на каждый запрос</text>
+
+<path d="M614 232H722" stroke="#9a6700" stroke-width="2" stroke-dasharray="6 4" fill="none" marker-end="url(#aw)"/>
+<text x="644" y="224" fill="#9a6700" font-size="12">редко</text>
+
+<path d="M614 366H722" stroke="#59636e" stroke-width="1.5" fill="none" marker-start="url(#ak)" marker-end="url(#ak)"/>
+
+<path d="M121 340V274" stroke="#59636e" stroke-width="1.5" fill="none" marker-start="url(#ak)" marker-end="url(#ak)"/>
+<text x="130" y="312" fill="#59636e" font-size="12">токен, refresh</text>
+
+<text x="16" y="456" fill="#59636e" font-size="12">Зелёное — путь без отдельного запроса за квотой. Жёлтое — единственное место, где вообще бывает /api/oauth/usage.</text>
+</g>
+</svg>
+
+<h2 id="q1">1. Прямой вызов эндпоинта или нет</h2>
+<p>В обоих бандлах расширения нет строки <code>oauth/usage</code>. В <code>extension.js</code> из <code>api/oauth</code> встречаются таблица адресов (<code>create_api_key</code>, <code>roles</code>, адреса авторизации) и один живой запрос — <code>/api/oauth/profile</code>.</p>
+<figure class="q"><figcaption><code>extension.js</code> · байтовое смещение <b>1153578</b> · единственный GET с Bearer-токеном среди всех /api/oauth/*</figcaption><pre>let e=`${Ea().BASE_API_URL}/api/oauth/profile`;for(let t=0;t&lt;2;t++){if(t&gt;0&amp;&amp;await this.residencyGateClosed())return null;let n=this.loginEpoch,r=this.getOAuthTokens();if(!r?.accessToken)return null;let i=(await js.get(e,{headers:{Authorization:`Bearer ${r.accessToken}`,&quot;anthropic-beta&quot;:Bh},timeout:1e4,proxy:!1,adapter:dl(this.lo</pre></figure>
+<p>Дальше расширение работает так. Процесс <code>claude</code> запускается через Agent SDK (в логах расширения строки «Spawning Claude with SDK query function»). Из его потока расширение ловит сообщения <code>rate_limit_event</code> и пересылает окна в webview. Те же сообщения webview разбирает и сам.</p>
+<figure class="q"><figcaption><code>extension.js</code> · байтовое смещение <b>2875138</b> · поток от процесса claude → панель</figcaption><pre>if(oe.type===&quot;rate_limit_event&quot;&amp;&amp;oe.rate_limit_info.unifiedWindows)try{this.relayPanelUsageWindows(oe.rate_limit_info.unifiedWindows)}catch(Le){this.logger.warn(`panel_usage_update relay failed: ${Le}`)}Z6e(oe)}this.closeChannel(e,!0)}catch(oe){let L</pre></figure>
+<figure class="q"><figcaption><code>webview/index.js</code> · байтовое смещение <b>3857432</b> · то же событие внутри webview</figcaption><pre>else if(e.type===&quot;rate_limit_event&quot;){let n=e.rate_limit_info;MV(n.unifiedWindows),this.setUsageLimitGrace(n);let i=$$e(n,this.dismissedRateLimitKeys);if(i===&quot;clear&quot;)pr(()=&gt;{this.frameRateLimitWarning.value=null,this.shownRateLimit</pre></figure>
+<p>Второй вход — явный запрос чисел у процесса. Метод SDK называется <code>usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET</code> и уходит процессу как управляющий запрос <code>get_usage</code>. Ответ содержит <code>rate_limits</code> и <code>rate_limits_available</code>.</p>
+<figure class="q"><figcaption><code>extension.js</code> · байтовое смещение <b>2904321</b> · управляющий запрос get_usage к процессу</figcaption><pre>async getUsage(e){try{return await this.withChannel(e,async(t)=&gt;{let n=this.configEpoch,r=t.sessionId,o=++t.sessionTotalsReads,i=await t.query.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET();if(this.configEpoch===n){if(this.relayUsageWindows(i),r!==void 0)this.noteSessionTotals(t,r,i,n,o)}return{type:&quot;get_usage_response&quot;,usage:i}})}catch(t){return this.logger.error(&quot;Failed to get usage&quot;,String(t)),{type:&quot;get_usage_response&quot;,error:String(t)}}}relayUsageWindows(e){try{let t=x4e(e.rate_limits);if(t)this.relayPanelUsageWindows(t)}catch(t){this.logger.warn(`panel_usage_update relay from get_usage failed: ${t}`)}}relayPanelUsageWindows(e){if(this.authManager.isThirdPartyProvider())return;this.onRateLimitW</pre></figure>
+<figure class="q"><figcaption><code>extension.js</code> · байтовое смещение <b>2554781</b> · разбор rate_limits: проценты в доли, просроченные окна выбрасываются</figcaption><pre>function j7(e,t){if(!e||e.utilization===null||!Number.isFinite(e.utilization))return;if(e.resets_at===null)return{utilization:e.utilization/100};let n=Date.parse(e.resets_at);if(!Number.isFinite(n))return;if(n&lt;=t)return;return{utilization:e.utilization/100,resetsAt:Math.round(n/1000)}}function x4e(e,t=Date.now()){if(!e)return null;let n=j7(e.seven_day,t),r=e.five_hour===null&amp;&amp;n?null:j7(e.five_hour,t),o=e.model_scoped,i;if(Array.isArray(o)){if(o.length===0)i=null;else if(o.length===1)i=j7(o[0],t)}if(r===void 0&amp;&amp;!n&amp;&amp;i===void 0)return null;return{...r!==void 0&amp;&amp;{five_hour:r},...n&amp;&amp;{seven_day:n},...i!==void 0&amp;&amp;{seven_day_overage_included:i}}}var T4e=Object.freeze({type:&quot;setMode&quot;,mode:&quot;default&quot;,destination:&quot;session&quot;});var k4e=require(&quot;crypto&quot;);function Xo</pre></figure>
+<p>Что при этом делает сам процесс, видно уже в бинаре. Там есть и чтение эндпоинта, и более дешёвый путь через заголовки. Адреса чтения:</p>
+<figure class="q"><figcaption><code>resources/native-binary/claude</code> · байтовое смещение <b>227912111</b> · какие URL бывают у чтения</figcaption><pre>function ce(e){switch(e.read){case void 0:case&quot;plain&quot;:return&quot;/api/oauth/usage&quot;;case&quot;cedar_ember&quot;:return&quot;/api/oauth/usage?cedar_ember=1&amp;skip_spend=1&quot;;case&quot;at_wall&quot;:return nEt()?`/api/oauth/usage?at_wall=1&amp;${pe}=${Be(e)}&amp;skip_spend=1`:&quot;/api/oauth/usage?at_wall=1&amp;skip_spend=1&quot;;case&quot;starry_waterfall&quot;:return`/api/oauth/usage?${pe}=${</pre></figure>
+<p>Заголовки, из которых процесс собирает окна без отдельного запроса:</p>
+<table><tr><th>Заголовок</th><th>Что в нём</th></tr>
+<tr><td><code>anthropic-ratelimit-unified-5h-utilization</code>, <code>-5h-reset</code>, <code>-5h-status</code></td><td>окно 5 часов: доля использования, момент сброса, статус</td></tr>
+<tr><td><code>anthropic-ratelimit-unified-7d-utilization</code>, <code>-7d-reset</code>, <code>-7d-status</code></td><td>недельное окно: то же самое</td></tr>
+<tr><td><code>anthropic-ratelimit-unified-representative-claim</code>, <code>-status</code>, <code>-reset</code></td><td>какое окно сейчас ограничивающее</td></tr>
+<tr><td><code>anthropic-ratelimit-unified-overage-*</code></td><td>дополнительные кредиты (extra usage)</td></tr>
+</table>
+<p class="note">Список выбран из строк бинаря по префиксу <code>anthropic-ratelimit-unified-</code> (смещение первой группы <b>101874596</b>). Смысл полей <code>5h/7d</code> выводится из имён и из кода сборки окон; сами ответы API я не снимал.</p>
+<p>Кроме обычных ответов, при старте сессии процесс делает фоновый пробный запрос на один токен. Из его ответа он тоже берёт заголовки.</p>
+<figure class="q"><figcaption><code>resources/native-binary/claude</code> · байтовое смещение <b>227926040</b> · пробный запрос «quota» на 1 токен</figcaption><pre>async function et(e,n,r){let s=await EN({maxRetries:0,model:e,source:&quot;quota_check&quot;,agentContext:hd(),credentials:n}),d=[{role:&quot;user&quot;,content:&quot;quota&quot;}],m=zte(e);return s.beta.messages.create({model:LT(e),max_tokens:1,messages:d,metadata:a6e(),...e1e(m)},{signal:r}).asResponse()}async function vYs(e,n,r){await et(e,n,r)}function J</pre></figure>
+<h2 id="q2">2. Опрос: интервал и триггеры</h2>
+<p><b>Интервала нет.</b> Я просмотрел все вызовы <code>setInterval</code>: 9 в <code>extension.js</code> и 12 в <code>webview/index.js</code>. В расширении это очистка хранилища, ожидание условия через 100 мс (два места), пересканирование реестра сессий, тик «живости», keepalive и проверка тишины голосового ввода, автоархивация, проверка пропавших вкладок. В webview — детектор утечек слушателей (только отладка), таймер-обёртка VS Code, проверка простоя воркеров Monaco (три места), анимация счётчика токенов (100 мс), опрос статуса MCP-серверов раз в 2 с на экране переподключения, перерисовка относительного времени раз в минуту и четыре спиннера. К квотам не относится ни один.</p>
+<p>Обновление чисел запускают пять событий:</p>
+<table>
+<tr><th style="width:30%">Событие</th><th>Что происходит</th><th style="width:16%">Код</th></tr>
+<tr><td>Любой ответ API в сессии</td><td>Процесс шлёт <code>rate_limit_event</code> с <code>unifiedWindows</code>; расширение пересылает в панель, webview сразу кладёт в хранилище.</td><td>раздел 1</td></tr>
+<tr><td>Первая загрузка конфигурации (<code>afterConfigProbe</code>)</td><td>Читает числа через <code>get_usage</code>, но только если <code>claimInitialRead()</code> вернул true: чисел у раздатчика ещё нет (<code>merged === null</code>), выхода из аккаунта не было, первичное чтение ещё не занято. Занимается один раз; освобождается выходом, входом или сменой аккаунта снаружи.</td><td>ниже</td></tr>
+<tr><td>Вход в аккаунт (<code>afterLogin</code>)</td><td>Читает числа через <code>get_usage</code> без скана транскриптов (<code>skipBehaviors</code>).</td><td>ниже</td></tr>
+<tr><td>Смена аккаунта в webview</td><td>Сбрасывает показанное и просит <code>request_usage_update</code>. Срабатывает на смену почты, не на первое появление.</td><td>ниже</td></tr>
+<tr><td>Явный <code>get_usage</code> из webview</td><td>Тот же путь, что в разделе 1.</td><td>раздел 1</td></tr>
+</table>
+<figure class="q"><figcaption><code>extension.js</code> · байтовое смещение <b>3201112</b> · когда расширение просит у процесса числа</figcaption><pre>async onUsageUpdateRequested(){await this.answerUsageUpdateRequest()}afterLogin(e){return this.relayUsageWindowsFromProcess(e)}afterConfigProbe(e,t){if(this.authManager.isThirdPartyProvider()||!this.claimInitialUsageRead?.())return Promise.resolve();return this.relayUsageWindowsFromProcess(e,t)}onLoginComplete(){super.onLoginCom</pre></figure>
+<figure class="q"><figcaption><code>extension.js</code> · байтовое смещение <b>3260048</b> · раздача чисел всем открытым панелям; первичное чтение — один раз</figcaption><pre>class Pne{merged=null;signedOut=!1;initialReadTaken=!1;broadcast(e,t){if(!this.signedOut)this.merged=C4e(this.merged,t);for(let n of e)n.sendPanelUsageUpdate(t)}seed(e){if(this.merged!==null)e.sendPanelUsageUpdate(this.merged)}claimInitialRead(){if(this.merged!==null||this.signedOut||this.initialReadTaken)return!1;return this.initialReadTaken=!0,!0}onLogout(){this.merged=null,this.signedOut=!0,this.initialReadTaken=!1}onLogin(</pre></figure>
+<figure class="q"><figcaption><code>webview/index.js</code> · байтовое смещение <b>5996824</b> · единственное место, где webview просит обновление: смена аккаунта</figcaption><pre>Z(()=&gt;{if(d.current.observe(c)){if(NV(),c!==null)e.requestUsageUpdate()}},[c,e]),Z(()=&gt;{e.listSessions(&quot;sidebar_mount&quot;),e.listSessionGr</pre></figure>
+<figure class="q"><figcaption><code>extension.js</code> · байтовое смещение <b>2830638</b> · таймаут чтения 15 с</figcaption><pre>var znr=15000,GJ=&quot;Couldn&#x27;t confirm whether Remote Control is</pre></figure>
+<p>Вывод для платы: у расширения «частое обновление» получается не из частых запросов за лимитами, а из того, что каждый ответ модели несёт числа в заголовках. Если в VS Code никто не работает, индикатор не обновляется, и это нормально: использование растёт только вместе с запросами. Исключение — расход с другого устройства или с claude.ai, он появится в заголовках только при следующем запросе здесь.</p>
+<h2 id="q3">3. Что с 429</h2>
+<p>Расширение к 429 по <code>/api/oauth/usage</code> почти не приближается: в просмотренных логах (с 12 по 16 ноября) вообще три запроса к этому эндпоинту (см. <a href="#machine">«Что видно на этой машине»</a>). А тот, что делает CLI, защищён несколькими слоями. Все константы лежат рядом:</p>
+<figure class="q"><figcaption><code>resources/native-binary/claude</code> · байтовое смещение <b>227911062</b> · 5 мин / 1 ч / 1 ч</figcaption><pre>var Ct=300000,$e=3600000,Pt=3600000,he=ge(new se($e),(e)=&gt;e.clear()),Fe=ge({attempted:!1},(e)=&gt;{e.attempted=!1}),V=ge(new Set,(e)=&gt;{e.clear()}),Tt=&quot;te</pre></figure>
+<figure class="q"><figcaption><code>resources/native-binary/claude</code> · байтовое смещение <b>227912981</b> · сам GET с таймаутом 5 с (повтор после 401 с обновлением токена — дальше по коду)</figcaption><pre>let L=await G({credentials:e,settle:!1});if(h!==void 0&amp;&amp;L===h.key)throw h.error;t(`fetchUtilization: GET ${r} (attempt ${p})`);try{let C=await Lt.get(r,{timeout:5000,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},refreshOAuth:!0,credentials:e,validateStatus:Ot});if(!C.ok)throw Error(`Auth error: ${C.reason===&quot;no-auth&quot;?C.detail:C.reason}`);return C}catch(C){let I=s?Dt(C,L):null;if(I!==null)h={key:I,error:C};let P=j(C);if(R=P?.sent</pre></figure>
+<p>Запоминание ответа. Для 429 и 403 срок равен <code>retry-after</code>, а если его нет или он ноль — 5 минут (<code>Ct</code>); верхний предел 1 час (<code>$e</code>). Для отклонённой авторизации — 1 час (<code>Pt</code>). Пока срок не вышел, функция <code>fe</code> не делает HTTP-запрос, а бросает <code>RememberedResponseError</code> («replayed»).</p>
+<figure class="q"><figcaption><code>resources/native-binary/claude</code> · байтовое смещение <b>227914601</b> · запоминание ответа 429/403/401 для этого токена</figcaption><pre>function Dt(e,n){try{let r=j(e);if(r===void 0||r.status===void 0)return null;let s=r.sentAuthKey??n;if(s===null)return null;let{status:d,anthropicError:m}=r,p,h;if(ae(r))p=&quot;auth_rejected&quot;,h=Pt;else if(d===429||d===403){p=&quot;rate_limited&quot;;let R=r.retryAfterMs??0;h=Math.min(R&gt;0?R:Ct,$e)}else return null;let y=Date.now();return he.remember(s,{kind:p,status:d,body:m,recordedAtMs:y,untilMs:y+h}),t(`fetchUtilization: ${d} remembered for this bearer; not asking again for ${Math.round(h/1000)}s`),s}catch(r){return t(`fetchUtilization: could not record the endpoint&#x27;s answer: ${r instanceof Error?r.message:String(r)}`,{level</pre></figure>
+<p>Цепочка чтения целиком. Для подписки claude.ai с правом profile сначала пробуется снимок моложе 60 с — тогда ответ без сети. Потом идёт эндпоинт. Любая ошибка (в том числе 429) ведёт к запасному ответу со статусом <code>seeded</code> и полем <code>heldUntilMs</code>.</p>
+<figure class="q"><figcaption><code>resources/native-binary/claude</code> · байтовое смещение <b>244594893</b> · цепочка: снимок → эндпоинт → запасной вариант</figcaption><pre>async function U(e,a){let s=sn()?.accountUuid;if(kt()&amp;&amp;Zp()){let i=CYs(e);if(i)return t(`Usage read answered from a snapshot ${Math.round(i.ageMs/1000)}s old; endpoint not asked`),{status:&quot;ok&quot;,utilization:i.utilization}}try{let i=await RM(a);if(!i)return{status:&quot;empty_response&quot;};let n=kt()&amp;&amp;Zp(),u=yYs(i),o=l6e(i);if(!u||n&amp;&amp;!o){t(&quot;Usage fetch returned a fieldless or non-object body (in-band error)&quot;,{level:&quot;error&quot;});let c=u&amp;&amp;&quot;error&quot;in i?i.error:void 0,m=typeof c===&quot;object&quot;&amp;&amp;c!==null&amp;&amp;&quot;type&quot;in c&amp;&amp;c.type===&quot;rate_limit_error&quot;?&quot;envelope&quot;:null,p=MGn(e);if(p)return g(p,m);return{status:&quot;unavailable&quot;,rateLimitedVia:m,responseBody:h(_(i))}}if(o)kYs(i,s,e);return{status:&quot;ok&quot;,utilization:i}}catch(i){if(Qf(i))t(`Failed to load usage data: ${d(i)}`,{level:&quot;error&quot;});else l(i);let n=i,u=n.response?.status===429?&quot;http_429&quot;:null,o=u===null?void 0:await SYs(a).catch((m)=&gt;{l(m);return}),c=MGn(e);if(c)return g(c,u,o);return{status:&quot;unavailable&quot;,rateLimitedVia:u,heldUntilMs:o,responseBody:n.response?.data?h(_(n.response.data)):void 0}}}function v(e,a,s){let i=HJe(e,a,s);return{recommendations:i.map(({key:n,pct:u,title:o,detail:c})=&gt;({key:n,pct:u,title:o,detail:c})),fix:s&amp;&amp;_in(i),requ</pre></figure>
+<figure class="q"><figcaption><code>resources/native-binary/claude</code> · байтовое смещение <b>244593598</b> · запасной вариант: числа из заголовков, иначе сохранённый снимок</figcaption><pre>function MGn(e){let a=_X();if(!a.five_hour&amp;&amp;!a.seven_day){let n=Hzr(e);return n?{utilization:n.utilization,source:&quot;persisted&quot;,fetchedAtMs:n.fetchedAtMs}:null}let s=(n)=&gt;n?{utilization:vve(n.utilization),resets_at:new Date(n.resets_at*1000).toISOString()}:void 0,i=S(G2o().seven_day_overage_included,e);return{utilization:{five_hour:s(a.five_hour),seven_day:s(a.seven_day),...i&amp;&amp;{limits:[i]}},source:&quot;headers&quot;}}function S</pre></figure>
+<p class="note">Дедупликация: параллельные чтения одного вида делят один запрос (<code>Wt</code>/<code>pending</code>), а 401 во время чужого обновления токена ждёт его и повторяет запрос один раз. Всё это включено флагом <code>tengu_federated_robin</code> (по умолчанию <code>true</code>); при выключенном флаге память ответов очищается (<code>he.clear()</code>).</p>
+<h2 id="q4">4. Кэш на диске</h2>
+<p>Дисковый кэш один: ключ <code>cachedUsageUtilization</code> в глобальном конфиге CLI. Это <code>~/.claude.json</code>, а при заданном <code>CLAUDE_CONFIG_DIR</code> — <code>$CLAUDE_CONFIG_DIR/.claude.json</code>. Ниже константы и три функции. Снимок свежий 60 с (<code>it</code>), как запасной годится до 1 часа (<code>on</code>). Запись происходит только после успешного ответа эндпоинта и не чаще раза в <code>it</code>. Если <code>accountUuid</code> снимка не совпадает с текущим аккаунтом, ключ стирается. Снимок игнорируется, если после него уже пришли более свежие заголовки (<code>lastAppliedObservationAtMs</code>).</p>
+<figure class="q"><figcaption><code>resources/native-binary/claude</code> · байтовое смещение <b>227930166</b> · on = 1 ч, it = 60 с</figcaption><pre>on=3600000,it=60000,an=f(()=&gt;{</pre></figure>
+<figure class="q"><figcaption><code>resources/native-binary/claude</code> · байтовое смещение <b>227931221</b> · запись и чтение cachedUsageUtilization</figcaption><pre>function kYs(e,n,r){let s=sn()?.accountUuid;if(s!==n)return;let d=ue().cachedUsageUtilization,m=d&amp;&amp;d.accountUuid===s?Date.now()-d.fetchedAtMs:Number.POSITIVE_INFINITY;if(m&gt;=0&amp;&amp;m&lt;it)return;Pe((p)=&gt;({...p,cachedUsageUtilization:{fetchedAtMs:Date.now(),...s!==void 0&amp;&amp;{accountUuid:s},utilization:e}}),r)}function Hzr(e){let n=ue().cachedUsageUtilization;if(!n)return null;let r=an().safeParse(n);if(!r.success)return null;if(r.data.accountUuid!==sn()?.accountUuid)return Pe((d)=&gt;({...d,cachedUsageUtilization:void 0}),e),null;let s=Date.now()-r.data.fetchedAtMs;if(s&lt;0||s&gt;on)return null;return{utilization:r.data.utilization,fetchedAtMs:r.data.fetchedAtMs}}function CYs(e){let n=Hzr(e);if(!n)return null;let r=Date.now()-n.fetchedAtMs;if(r&gt;=it||U.lastAppliedObservationAtMs&gt;n.fetchedAtMs)return null;return{utilization:n.utilization,ageMs:r}}v</pre></figure>
+<p>Форма значения взята из схемы валидации в бинаре. <b>На этой машине ключа нет</b> ни в <code>~/.claude.json</code>, ни в <code>~/.claude/.claude.json</code>, поэтому пример иллюстративный: значения выдуманы, идентификатор убран.</p>
+<figure class="q"><figcaption>форма <code>cachedUsageUtilization</code> · значения иллюстративные</figcaption><pre>"cachedUsageUtilization": {
+  "fetchedAtMs": 1794787020000,
+  "accountUuid": "&lt;uuid&gt;",
+  "utilization": {
+    "five_hour":  { "utilization": 4,  "resets_at": "2026-11-16T05:00:00.000Z" },
+    "seven_day":  { "utilization": 0,  "resets_at": "2026-11-23T00:00:00.000Z" },
+    "seven_day_opus": null, "seven_day_sonnet": null,
+    "extra_usage": { "is_enabled": false, "monthly_limit": null, "used_credits": null, "utilization": null },
+    "limits": [ { "kind": "weekly_scoped", "group": "weekly", "percent": 17, "resets_at": "...",
+                  "severity": "normal", "is_active": true,
+                  "scope": { "model": { "display_name": "Fable" } } } ]
+  }
+}</pre></figure>
+<p>Есть ещё кэш в памяти процесса — числа из заголовков (<code>rawUtilization</code>). Снаружи его можно увидеть только через <code>statusLine</code>: команда получает на stdin JSON, в котором <code>rate_limits</code> собран из этого хранилища, а окна с уже прошедшим <code>resets_at</code> отбрасываются.</p>
+<figure class="q"><figcaption><code>resources/native-binary/claude</code> · байтовое смещение <b>233345292</b> · JSON для statusLine: rate_limits из заголовков</figcaption><pre>let ft={...Tt.five_hour&amp;&amp;{five_hour:{used_percentage:vve(Tt.five_hour.utilization),resets_at:Tt.five_hour.resets_at}},...Tt.seven_day&amp;&amp;{seven_day:{used_percentage:vve(Tt.seven_day.utilization),resets_at:Tt.seven_day.resets_at}},...Te()===&quot;gateway&quot;&amp;&amp;Tt.overage&amp;&amp;{spend_limit:{used_percentage:qct(Tt.overage.utilization),resets_at:Tt.overage.resets_at,...gt&amp;&amp;gt.currency===&quot;USD&quot;&amp;&amp;{used_usd:gt.used/100,limit_usd:gt.limit/100,...gt.period&amp;&amp;{period:gt.period}}}}};return{...wp(e,be),...yt&amp;&amp;{session_name:yt},model:{id:ze,dis</pre></figure>
+<p>Форма этого блока:</p>
+<figure class="q"><figcaption>stdin команды <code>statusLine</code> · фрагмент · значения иллюстративные</figcaption><pre>"rate_limits": {
+  "five_hour": { "used_percentage": 4, "resets_at": 1794806400 },
+  "seven_day": { "used_percentage": 0, "resets_at": 1795392000 }
+}</pre></figure>
+<p class="note"><code>resets_at</code> здесь — секунды Unix. Блок присутствует, только если хоть одно окно известно.</p>
+<h2 id="q5">5. Токен</h2>
+<p>Расширение хранит и читает учётные данные тем же способом, что и CLI. Имя элемента Keychain — <code>Claude Code</code> + суффикс сборки + <code>-credentials</code>, и если задан <code>CLAUDE_CONFIG_DIR</code>, к имени добавляется <code>-</code> и первые 8 символов SHA-256 от пути этого каталога. В обычной настройке получается <code>Claude Code-credentials</code>.</p>
+<figure class="q"><figcaption><code>extension.js</code> · байтовое смещение <b>1075427</b> · имя элемента Keychain</figcaption><pre>function nc(e=&quot;&quot;){let t=process.env.CLAUDE_SECURESTORAGE_CONFIG_DIR,n=t!==void 0?!t:!process.env.CLAUDE_CONFIG_DIR,r=t!==void 0?t.normalize(&quot;NFC&quot;):Ds(),o=n?&quot;&quot;:`-${zye.createHash(&quot;sha256&quot;).update(r).digest(&quot;hex&quot;).substring(0,8)}`;return`Claude Code${Ea().OAUTH_FILE_SUFFIX}${e}${o}`}var RUt=/^[a-zA-Z0-9._-]+$/;function rc(){if(process.platform===&quot;win32&quot;)return&quot;claude-code-user&quot;;let e;try{e=process.env.USER||DP.userInfo</pre></figure>
+<figure class="q"><figcaption><code>extension.js</code> · байтовое смещение <b>1081521</b> · чтение через /usr/bin/security</figcaption><pre>async function iEe(e,t){let n=e.generation;try{let r=nc(df),o=rc(),{stdout:i,code:s}=await ag(&quot;security&quot;,[&quot;find-generic-password&quot;,&quot;-a&quot;,o,&quot;-w&quot;,&quot;-s&quot;,r],{useCwd:!1,preserveOutputOnError:!1,timeout:JC});if(s===0&amp;&amp;i)return NP(e,!0,n),Ls(i.trim());if(s===sEe)return NP(e,!1,n),null;if(s===0)return null;if(s===aEe)switch(t?.inaccessible</pre></figure>
+<p>Обновляет токен тоже само расширение. Ниже кусок после обмена refresh-токена: новый <code>refreshToken</code> берётся из ответа, если сервер его прислал, и записывается обратно. Если сохранённый вход тем временем поменялся, результат помечается <code>superseded</code>.</p>
+<figure class="q"><figcaption><code>extension.js</code> · байтовое смещение <b>1159932</b> · расширение обновляет токен само и пишет обратно</figcaption><pre>if(a===&quot;superseded&quot;){this.cachedOrgUUID=null,this.logger.log(&quot;The stored login changed during the token refresh; using what is stored now&quot;);let l=this.getOAuthTokens();return l?.accessToken?l:null}if(a===&quot;saved&quot;)this.logger.log(&quot;OAuth token refreshed successfully&quot;);return s}catch(n){return this.logger.error(`Failed to refresh OAuth token: ${n}`),null}}getOAu</pre></figure>
+<figure class="q"><figcaption><code>extension.js</code> · байтовое смещение <b>363090</b> · адрес обновления токена в текущей сборке</figcaption><pre>TOKEN_URL:&quot;https://platform.claude.com/v1/oauth/token&quot;,API_KEY_URL:&quot;ht</pre></figure>
+<p>Что это значит для платы.</p>
+<ul>
+<li>Лимит <code>/api/oauth/usage</code>, как сообщают в issues, считается на access-токен. Токен у расширения, CLI и платы в режиме «Fetch on board» один и тот же, значит и бюджет запросов общий.</li>
+<li>Плата в резервном режиме держит копию refresh-токена Claude Code и сама его обновляет. Сервер может прислать новый refresh-токен (<code>i.refresh_token||t</code> в коде выше), поэтому плата и Claude Code могут вытеснять друг друга из входа. Расширение такой случай обрабатывает (<code>superseded</code>), а плата о нём не узнает.</li>
+<li>Адрес обновления в текущей сборке — <code>platform.claude.com/v1/oauth/token</code>. В README платы указан <code>console.anthropic.com/v1/oauth/token</code>; стоит сверить, тот ли это хост.</li>
+</ul>
+<h2 id="machine">Что видно на этой машине</h2>
+<p>Сверка кода с тем, что реально происходило. Источники: 17 лог-файлов расширения в <code>~/Library/Application Support/Code/logs/*/window*/exthost/Anthropic.claude-code/</code> (с 2026-11-12 по 2026-11-16, уровень debug) и несколько файлов состояния.</p>
+<table>
+<tr><th style="width:34%">Наблюдение</th><th>Результат</th></tr>
+<tr><td>Запусков процесса <code>claude</code> (строки «Spawning Claude with SDK query function»)</td><td>56</td></tr>
+<tr><td>Из них со строкой <code>fetchUtilization: GET /api/oauth/usage</code></td><td>3, по одной в окнах <code>20261112T122055/window3</code>, <code>20261112T122055/window5</code>, <code>20261112T140016/window5</code>; каждая сразу после старта процесса</td></tr>
+<tr><td>Строки «200 after» или ошибки чтения после этих GET</td><td>нет. В <code>window3</code> через 0,1 с идёт <code>[uds-messaging] Shutting down</code>. Гипотеза: процесс-проба закрывается раньше, чем приходит ответ</td></tr>
+<tr><td>429 по usage-эндпоинту, «remembered for this bearer»</td><td>не найдено</td></tr>
+<tr><td>Строки с 429 вообще</td><td>10, все — <code>rate_limit_error</code> на <code>/v1/messages</code> («This request would exceed your account's rate limit»). Серия в 2026-11-16 00:38–00:54 совпадает с <code>fh:100</code> в <code>plan-usage-history.json</code> в 00:38:35: это исчерпанное окно 5 часов, а не отказ эндпоинта лимитов</td></tr>
+<tr><td><code>cachedUsageUtilization</code> в <code>~/.claude.json</code> и <code>~/.claude/.claude.json</code></td><td>отсутствует. Согласуется с тем, что ни один GET не дошёл до успешной записи</td></tr>
+<tr><td>Снимок statusLine <code>~/.claude/projects/.agent-meter-quota.json</code></td><td>отсутствует, хотя в <code>~/.claude/settings.json</code> прописан <code>statusLine</code> с <code>AgentMeterStatus</code></td></tr>
+</table>
+<p class="note">Последняя строка плюс то, что в бандле расширения нет запуска <code>statusLine</code> (в webview слово <code>statusLine</code> встречается только как имена CSS-классов), говорит: панель VS Code пользовательскую команду statusLine не запускает. Это вывод по коду и по отсутствию файла, а не прямая проверка.</p>
+<h2 id="sources">Локальные источники, которые можно читать</h2>
+<p>Если спрашивать, читает ли расширение какой-нибудь файл, который кто-то обновляет, — нет, не читает. Ниже всё, что на этой машине содержит квоты Claude, в порядке полезности для платы.</p>
+<table>
+<tr><th style="width:24%">Путь</th><th style="width:22%">Формат</th><th>Кто пишет и как часто</th><th style="width:11%">Время сброса</th><th style="width:15%">Состояние сейчас</th></tr>
+<tr><td><code class="wrap">~/Library/Application Support/Agent Meter/claude-usage.json</code></td><td>JSON, ниже. Даты — секунды от 2001-01-01 (Swift <code>Date</code>)</td><td>Agent Meter, задание launchd <code>local.agentmeter.refresh</code>, каждые 5 минут. Отдельный вход в <code>~/Library/Application Support/Agent Meter/claude-code</code>, значит отдельный токен. При 429 ставит <code>status:"throttled"</code> и <code>retryAt</code> на час, старые числа оставляет</td><td><span class="tag ok">есть</span></td><td><span class="tag ok">свежий</span> <code>status: ready</code>, возраст на момент чтения около 8 минут</td></tr>
+<tr><td><code class="wrap">~/Library/Application Support/Claude/plan-usage-history.json</code></td><td>JSON v2: <code>samples[{t, org, u:{fh, sd}}]</code>, целые проценты, <code>t</code> в мс Unix</td><td>приложение Claude Desktop, пока запущено. 115 записей с 2026-10-31, медианный интервал последних 40 — 15 минут</td><td><span class="tag bad">нет</span></td><td><span class="tag ok">свежий</span> на момент разбора последней записи было 22 с</td></tr>
+<tr><td><code class="wrap">~/.claude.json → cachedUsageUtilization</code></td><td>см. раздел 4</td><td>процесс <code>claude</code>, только после успешного GET, не чаще раза в 60 с</td><td><span class="tag ok">есть</span></td><td><span class="tag bad">пусто</span></td></tr>
+<tr><td><code class="wrap">stdin команды statusLine → свой файл</code> (у Agent Meter <code>~/.claude/projects/.agent-meter-quota.json</code>)</td><td>JSON <code>rate_limits.five_hour|seven_day {used_percentage, resets_at}</code></td><td>терминальный <code>claude</code> после ответов, по коду; числа из заголовков, запроса за квотой нет. Режим <code>refreshInterval</code> перезапускает команду, но новых данных не добавляет</td><td><span class="tag ok">есть</span></td><td><span class="tag bad">файла нет</span></td></tr>
+<tr><td><code class="wrap">~/.claude-statistics/usage-cache.json</code></td><td>JSON с блоками <code>api</code> и <code>stdin</code></td><td>другое приложение, последняя запись 2026-11-10</td><td><span class="tag ok">есть</span></td><td><span class="tag bad">мёртвый</span> не использовать</td></tr>
+</table>
+<h3>Пример: <code>claude-usage.json</code> Agent Meter</h3>
+<p>Файл как есть (в нём только проценты и даты, секретов нет):</p>
+<figure class="q"><figcaption>~/Library/Application Support/Agent Meter/claude-usage.json</figcaption><pre>{&quot;status&quot;:&quot;ready&quot;,&quot;quotas&quot;:[{&quot;window&quot;:300,&quot;used&quot;:18,&quot;resetsAt&quot;:816497400.0585461,&quot;observedAt&quot;:816481396.013641},{&quot;window&quot;:10080,&quot;used&quot;:3,&quot;observedAt&quot;:816481396.013641,&quot;resetsAt&quot;:816818400.0585699}],&quot;fable&quot;:{&quot;window&quot;:10080,&quot;used&quot;:0,&quot;observedAt&quot;:816481396.013641,&quot;resetsAt&quot;:816818400},&quot;models&quot;:[],&quot;attemptedAt&quot;:816481396.013641,&quot;separateSignIn&quot;:true}</pre></figure>
+<table>
+<tr><th>Поле</th><th>Значение</th><th>Расшифровка</th></tr>
+<tr><td><code>quotas[0]</code>, <code>window: 300</code></td><td><code>used: 18</code></td><td>окно 5 часов, использовано 18 %, сброс 2026-11-16 04:50:00 UTC</td></tr>
+<tr><td><code>quotas[1]</code>, <code>window: 10080</code></td><td><code>used: 3</code></td><td>недельное окно (10080 минут), использовано 3 %, сброс 2026-11-19 22:00:00 UTC</td></tr>
+<tr><td><code>fable</code></td><td><code>used: 0</code></td><td>отдельная недельная квота Fable, использовано 0 %</td></tr>
+<tr><td><code>observedAt</code></td><td><code>816481396</code></td><td>2026-11-16 00:23:16 UTC. Чтобы получить время Unix, прибавить 978307200</td></tr>
+<tr><td><code>status</code>, <code>separateSignIn</code></td><td><code>ready</code>, <code>true</code></td><td>последний опрос удался, вход отдельный</td></tr>
+</table>
+<p class="note">Локальное время на этой машине — UTC+1. Возможные статусы из кода Agent Meter: <code>ready</code>, <code>clientMissing</code>, <code>needsLogin</code>, <code>timedOut</code>, <code>unavailable</code>, <code>throttled</code>.</p>
+<h3>Пример: <code>plan-usage-history.json</code> Claude Desktop</h3>
+<figure class="q"><figcaption>~/Library/Application Support/Claude/plan-usage-history.json · три последние записи, org скрыт</figcaption><pre>{&quot;version&quot;:2,&quot;samples&quot;:[{&quot;t&quot;:1794787044621,&quot;org&quot;:&quot;&lt;uuid&gt;&quot;,&quot;u&quot;:{&quot;fh&quot;:0,&quot;sd&quot;:0}},{&quot;t&quot;:1794787390968,&quot;org&quot;:&quot;&lt;uuid&gt;&quot;,&quot;u&quot;:{&quot;fh&quot;:4,&quot;sd&quot;:0}},{&quot;t&quot;:1794787763533,&quot;org&quot;:&quot;&lt;uuid&gt;&quot;,&quot;u&quot;:{&quot;fh&quot;:7,&quot;sd&quot;:1}}]}</pre></figure>
+<p class="note"><code>fh</code> — окно 5 часов, <code>sd</code> — окно 7 дней, обе величины в процентах. Времени сброса в файле нет, поэтому плата не может сама понять, что окно уже обнулилось.</p>
+<h2 id="todo">Что делать плате</h2>
+<div class="box key"><h3>Рекомендация</h3>
+<p>Убрать опрос эндпоинта токеном Claude Code из основного пути. Плата берёт числа от Mac по BLE, а Mac берёт их из файла, который уже поддерживает Agent Meter. Прямой GET остаётся запасным путём, но с отдельным входом и с правилами CLI.</p></div>
+<h3>1. Основной путь: числа от Mac</h3>
+<p>В README платы так и задумано: Mac уже собирает лимиты и отдаёт их по BLE, плата токенов не держит. Источник на стороне Mac — <code>~/Library/Application Support/Agent Meter/claude-usage.json</code>. Он обновляется каждые 5 минут под отдельным входом, поэтому не делит бюджет с VS Code и не ломает его вход.</p>
+<p>Соответствие полей:</p>
+<table>
+<tr><th>Для платы</th><th>Откуда в <code>claude-usage.json</code></th></tr>
+<tr><td>5 часов: процент, сброс</td><td><code>quotas[window == 300]</code>: <code>used</code>, <code>resetsAt</code> + 978307200</td></tr>
+<tr><td>7 дней: процент, сброс</td><td><code>quotas[window == 10080]</code>: <code>used</code>, <code>resetsAt</code> + 978307200</td></tr>
+<tr><td>Fable</td><td><code>fable.used</code>, <code>fable.resetsAt</code> + 978307200</td></tr>
+<tr><td>Возраст данных</td><td>сейчас минус (<code>quotas[].observedAt</code> + 978307200); не <code>attemptedAt</code>, потому что при ошибке старые числа остаются, а <code>attemptedAt</code> обновляется</td></tr>
+<tr><td>Признак «опрос не удался»</td><td><code>status != "ready"</code> (для 429 — <code>throttled</code>, плюс <code>retryAt</code>)</td></tr>
+</table>
+<h3>2. Как плате показывать устаревшие числа</h3>
+<ul>
+<li>Хранить последнее хорошее значение вместе с моментом наблюдения и показывать возраст. Порог «устарело» — 15 минут при опросе раз в 5.</li>
+<li>Если время сброса окна уже прошло, число в нём больше недействительно. Сам CLI в этом случае выбрасывает окно (<code>j7</code>/<code>x4e</code> в расширении, <code>ot()</code> в бинаре). Плате лучше показать «ожидание данных» или 0 % с пометкой, чем старые 100 %.</li>
+<li>Не считать 429 отказом навсегда. Agent Meter откладывает следующую попытку на час (<code>throttleBackoff = 60 * 60</code>), CLI — на <code>retry-after</code> или на 5 минут.</li>
+</ul>
+<h3>3. Запасной путь: плата ходит сама</h3>
+<p>Если оставлять режим «Fetch on board», то:</p>
+<ul>
+<li><b>Дать плате отдельный вход, а не копию токена Claude Code.</b> Тогда её запросы не расходуют бюджет VS Code и CLI, а её обновление токена не вытесняет их вход. Отдельный вход делается так же, как у Agent Meter: свой <code>CLAUDE_CONFIG_DIR</code> и <code>claude auth login</code> под ним, элемент Keychain получает суффикс с хэшем каталога.</li>
+<li><b>Копировать дисциплину CLI.</b> Один запрос в полёте. Результат хранить минимум 60 с. На 429 — ждать <code>retry-after</code>, иначе 5 минут, потолок час, и помнить это на токен. На 401 — одно обновление токена и один повтор. Таймаут 5 с. Заголовок <code>anthropic-beta: oauth-2025-04-20</code> остаётся.</li>
+<li>Интервал 20 минут уже мягче, чем у самого CLI, поэтому, если 429 приходит и на нём, причина скорее в том, что токен делит бюджет с кем-то ещё, а не в слишком частом опросе. Это гипотеза: порог на сервере я не измерял. Проверяется просто — переключить плату на отдельный вход и посмотреть, уйдут ли 429.</li>
+</ul>
+<h3>4. Живые данные без запросов за квотой (по желанию)</h3>
+<p>Для терминального <code>claude</code> есть бесплатный путь: команда <code>statusLine</code> получает <code>rate_limits</code> из заголовков и может записывать их в файл. Сейчас он у Agent Meter настроен, но файла нет, потому что в панели VS Code эта команда не запускается (см. <a href="#machine">выше</a>). Поэтому для работы только из VS Code он не поможет; в терминале — поможет.</p>
+<h3>5. Чего не делать</h3>
+<ul>
+<li>Не вызывать <code>/api/oauth/usage</code> токеном Claude Code по таймеру из нескольких мест одновременно.</li>
+<li>Не обновлять refresh-токен Claude Code из платы или из любого другого процесса, пока им пользуются CLI и расширение.</li>
+<li>Не читать <code>plan-usage-history.json</code> как единственный источник: в нём нет времён сброса, и он перестаёт обновляться, когда Claude Desktop закрыт.</li>
+</ul>
+<h2 id="live">Чтение из уже запущенного Claude без сети</h2>
+<p>Вопрос: можно ли не запускать свой процесс и не ходить в сеть, а брать числа у того <code>claude</code>, который и так работает (панель VS Code, терминал, вкладка Code в Claude Desktop), так же быстро, как их видит VS Code.</p>
+<table>
+<tr><th style="width:26%">Способ</th><th>Что выяснилось</th><th style="width:14%">Годится</th></tr>
+<tr><td>Подключиться к каналу VS Code ↔ <code>claude</code></td><td>Это stdin/stdout дочернего процесса, чужие трубы снаружи не открыть.</td><td><span class="tag bad">нет</span></td></tr>
+<tr><td>Сокет сессии <code>/tmp/cc-socks/&lt;pid&gt;.sock</code></td><td>Его объявляет каждая сессия в <code>~/.claude/sessions/&lt;pid&gt;.json</code> (<code>messagingSocketPath</code>). Это входящий ящик для сообщений между сессиями с ключом в файле <code>&lt;pid&gt;.&lt;hash&gt;.key</code> (0600). Запроса «дай состояние» там нет: сообщение становится репликой и запускает ход модели, то есть тратит лимит.</td><td><span class="tag bad">нет</span></td></tr>
+<tr><td>Команда <code>statusLine</code></td><td>Получает <code>rate_limits</code> из заголовков без запросов, но запускается только в терминальном <code>claude</code>; панель VS Code её не вызывает.</td><td><span class="tag warn">частично</span></td></tr>
+<tr><td>Мод с хуком <code>session.measure</code></td><td>Работает внутри каждого процесса <code>claude</code>. Событие приходит после каждого хода и когда окно сдвинулось на целый процент, появилось, ушло или сменился статус лимита. В нём <code>rateLimits</code> — те же числа из заголовков ответа. Мод пишет их в файл через <code>$.fs.write</code> по абсолютному пути. Событие есть и в 2.1.314 (VS Code), и в 2.1.321 (Desktop).</td><td><span class="tag ok">да</span></td></tr>
+</table>
+<p>Как это выглядит в типах движка (файл <code>types/claude-code.d.ts</code> из навыка авторинга модов, сборка 2.1.321):</p>
+<figure class="q"><figcaption>claude-code.d.ts · событие <code>session.measure</code></figcaption><pre>Fires when the engine measures the session and a unit moved: after each
+main-thread turn, and when a rate-limit window moves a whole point.</pre></figure>
+<figure class="q"><figcaption>claude-code.d.ts · одно окно в <code>rateLimits</code>, сокращённо, пояснения после <code>//</code> мои</figcaption><pre>export type SessionRateLimit = {
+    kind: string;          // five_hour, seven_day или spend_limit шлюза
+    percentUsed: number;   // 0..100, не больше одного знака после точки
+    resetsAt?: string;     // ISO 8601
+};</pre></figure>
+<p>Схема для платы:</p>
+<ol>
+<li>Мод ставится один раз для всего пользователя (локальный marketplace и <code>claude plugin install</code>, либо папка в <code>CLAUDE_CODE_PLUGIN_DIRS</code> в <code>~/.claude/settings.json</code>). После этого он загружается в каждом <code>claude</code> на этом Mac: в терминале, в панели VS Code и во вкладке Code в Desktop.</li>
+<li>На <code>session.start</code> и на каждый <code>session.measure</code>, если окна есть, мод записывает в <code>~/.claude/quota-live.json</code> окна <code>five_hour</code> и <code>seven_day</code> с <code>percentUsed</code>, <code>resetsAt</code> и временем наблюдения. Запись после каждого хода, а не только при сдвиге процента, нужна, чтобы плата отличала свежие числа от давно не обновлявшихся.</li>
+<li>Мост на Mac (Agent Meter или отдельный помощник) следит за файлом и отправляет числа на плату по BLE. Ни одного запроса к <code>/api/oauth/usage</code>.</li>
+</ol>
+<h3>Проверка на этой машине</h3>
+<p>Мод <code>quota-live</code> собран и загружен в одной сессии Claude Desktop 2.1.321. После первого же хода он записал <code>~/.claude/quota-live.json</code>: окно 5 часов 19 %, сброс 2026-11-16 04:50 UTC; неделя 3 %, сброс 2026-11-19 22:00 UTC. Agent Meter, который ходит в эндпоинт, полутора минутами раньше видел 18 % и 3 % с теми же временами сброса. Сейчас мод пишет файл при старте сессии и после каждого хода, если есть хоть одно окно.</p>
+<p>Ограничения:</p>
+<ul>
+<li>Числа обновляются только когда какой-то <code>claude</code> на этом Mac делает запросы. В простое использование и так не растёт, но расход с другого устройства или с claude.ai появится только при следующем запросе здесь. Плата по-прежнему сама гасит окно, когда прошёл <code>resetsAt</code>.</li>
+<li>В <code>rateLimits</code> только <code>five_hour</code> и <code>seven_day</code> (и <code>spend_limit</code> шлюза). Отдельной недельной квоты Fable там нет; её даёт только эндпоинт, то есть Agent Meter.</li>
+<li>Сессии Agent Meter под отдельным <code>CLAUDE_CONFIG_DIR</code> мод не загрузят, пока его не поставить и туда. Это и не нужно.</li>
+<li>Несколько сессий пишут один файл; у всех один аккаунт, так что побеждает самая свежая запись. Читатель должен переживать недописанный JSON и просто перечитывать.</li>
+</ul>
+<h2 id="limits">Что не проверено</h2>
+<ul>
+<li>Я не запускал <code>claude</code> и не обращался к эндпоинту: так требовала постановка (только чтение, без токенов). Поведение 429 восстановлено по коду и логам, но не воспроизведено.</li>
+<li>Серверный порог (сколько запросов на токен до 429) из клиента не виден. Все числа «60 с, 5 с, 5 мин, 1 ч» — клиентские.</li>
+<li>Имена вроде <code>RM</code>, <code>Dt</code>, <code>U</code>, <code>MGn</code> получены минификацией версии 2.1.314 и изменятся в другой. Надёжнее искать по строкам: <code>fetchUtilization:</code>, <code>cachedUsageUtilization</code>, <code>quota_check</code>.</li>
+<li>Форма <code>cachedUsageUtilization</code> взята из схемы валидации; реального ключа на этой машине нет.</li>
+<li>Условия, при которых процесс делает пробный запрос <code>quota_check</code> при старте (флаг <code>tengu_cicada_nap_ms</code> и гейты <code>St()</code>, <code>_e()</code>), минифицированы; смысл гейтов не расшифрован.</li>
+<li>Что панель VS Code не запускает <code>statusLine</code> — вывод по отсутствию кода и файла.</li>
+<li>Флаги вроде <code>tengu_federated_robin</code> приходят с сервера; поведение памяти ответов может отличаться у другого аккаунта или после обновления версии.</li>
+</ul>
+<h2 id="verify">Как перепроверить</h2>
+<p>Смещения в цитатах — байтовые, так что их можно проверять утилитами, которые считают байты.</p>
+<pre>EXT=~/.vscode/extensions/anthropic.claude-code-2.1.314-darwin-arm64
+
+grep -c 'oauth/usage' "$EXT/extension.js" "$EXT/webview/index.js"
+
+grep -b -o 'rate_limit_event' "$EXT/extension.js"
+
+python3 -I - "$EXT/resources/native-binary/claude" &lt;&lt;'EOF'
+import sys, mmap
+f = open(sys.argv[1], 'rb')
+m = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+for needle in (b'Ct=300000,$e=3600000,Pt=3600000', b'on=3600000,it=60000', b'source:"quota_check"'):
+    i = m.find(needle)
+    print(i, m[i:i+120])
+EOF
+
+grep -c 'fetchUtilization: GET' ~/Library/Application\ Support/Code/logs/*/window*/exthost/Anthropic.claude-code/Claude\ VSCode.log</pre>
+<p class="note">Файлы с учётными данными Claude Code и Codex и элемент Keychain я не читал. Все идентификаторы аккаунта и организации в примерах убраны.</p>
+</main></body></html>
