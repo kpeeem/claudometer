@@ -42,6 +42,15 @@ Everything else about the board — theme, which cards show, redraw interval, ti
 same pane, stored on the board. Hold **BOOT** for two seconds for the setup portal, which covers
 Wi-Fi and the fallback as well.
 
+The board also renders its current page off-screen and serves it at `/panel.bin`, so you can see
+what is on the glass without a cable:
+
+```bash
+python3 -I scripts/preview.py /tmp/panel.png quotaboard.local
+```
+
+Add `1` after the host for the second page. The body is the two 15000-byte planes, black then red.
+
 After the first flash you never need the cable again:
 
 ```bash
@@ -75,7 +84,7 @@ inline instead. Four is the limit of this type scale.
 
 Per-model numbers only exist while Claude's automatic collection is working, so the weekly row
 falls back to the all-models window and relabels itself `Claude · all models` rather than going
-blank. A row whose reading is over an hour old, or whose window has already reset since it was
+blank. The Codex row does the same with its weekly window when there is no session number. A row whose reading is over an hour old, or whose window has already reset since it was
 read, says `cached` where it would otherwise count down — a stale number stays on screen, but it
 stops pretending to be current.
 
@@ -145,7 +154,9 @@ board's clock when Wi-Fi never came up.
 
 The settings characteristic carries the board's own configuration in both directions — source,
 theme, cards, redraw interval, timezone, plus firmware version and IP to read — so the Settings
-pane in Agent Meter edits exactly what the portal edits. The board notifies on every change, which
+pane in Agent Meter edits exactly what the portal edits. The timezone is not a choice there: the
+Mac writes its own offset whenever the board's differs, because a board whose clock disagrees with
+the Mac that feeds it is just wrong. The board notifies on every change, which
 is how the pane follows a reboot or an edit made in the portal.
 
 `agent` is what the sessions on the Mac are doing, from the hooks Agent Meter already installs:
@@ -238,8 +249,9 @@ pixel-identical to a full redraw.
 
 ### Seeing the UI without a panel
 
-A debug build renders into an off-screen two-plane canvas and dumps it over serial, which the host
-turns into a PNG — every screenshot above was produced this way:
+Every build renders into an off-screen two-plane canvas, which is what `/panel.bin` serves. A debug
+build also dumps that canvas over serial and can fill the rows with sample data, which is how the
+screenshots above are made:
 
 ```bash
 PLATFORMIO_BUILD_FLAGS="-DUI_MOCK=1" ~/.platformio/penv/bin/pio run -e quotaboard -t upload

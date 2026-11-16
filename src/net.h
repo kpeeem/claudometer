@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include "ui.h"
+
 struct HttpResult {
     int status = 0;
     String body;
@@ -12,8 +14,9 @@ struct HttpResult {
 bool netConnectWifi(uint32_t timeoutMs = 25000);
 bool netSyncClock(uint32_t timeoutMs = 15000);
 void netProbeExit();
-void netStartOta();
+void netStartServices();
 void netPollOta();
+void netPollServices();
 String netExitLabel();
 HttpResult netRequest(const char *host, const char *method, const char *path, const String &headers,
                       const String &body, size_t bodyLimit = 24576);

@@ -1,6 +1,7 @@
 #include "net.h"
 
 #include <ArduinoOTA.h>
+#include <WebServer.h>
 #include <ESPmDNS.h>
 #include <WiFi.h>
 #include <esp_crt_bundle.h>
@@ -51,7 +52,7 @@ bool netConnectWifi(uint32_t timeoutMs) {
 
     log_i("wifi ok ssid=%s ip=%s rssi=%d", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.RSSI());
     MDNS.begin("quotaboard");
-    netStartOta();
+    netStartServices();
     return true;
 }
 
@@ -308,8 +309,19 @@ void netProbeExit() {
 String netExitLabel() { return exitLabel; }
 
 static bool otaUp = false;
+static WebServer *panel = nullptr;
 
-void netStartOta() {
+static void sendPanel() {
+    Page page = panel->arg("page") == "1" ? Page::ClaudeDetail : Page::Overview;
+    uiRenderPlanes(page);
+    size_t bytes = uiPlaneBytes();
+    panel->setContentLength(bytes * 2);
+    panel->send(200, "application/octet-stream", "");
+    panel->sendContent((const char *)uiPlane(false), bytes);
+    panel->sendContent((const char *)uiPlane(true), bytes);
+}
+
+void netStartServices() {
     if (otaUp) return;
     ArduinoOTA.setHostname("quotaboard");
     ArduinoOTA.setPassword(OTA_PASSWORD);
@@ -318,9 +330,18 @@ void netStartOta() {
     ArduinoOTA.onError([](ota_error_t error) { log_e("ota error %u", error); });
     ArduinoOTA.begin();
     otaUp = true;
-    log_i("ota ready on quotaboard.local");
+
+    panel = new WebServer(80);
+    panel->on("/panel.bin", sendPanel);
+    panel->begin();
+    log_i("ota and /panel.bin ready on quotaboard.local");
 }
 
 void netPollOta() {
     if (otaUp) ArduinoOTA.handle();
+}
+
+void netPollServices() {
+    netPollOta();
+    if (panel) panel->handleClient();
 }

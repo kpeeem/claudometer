@@ -15,6 +15,9 @@ void uiPortalScreen(const char *ssid, const char *ip);
 void uiSetBusy(bool busy);
 bool uiSupportsPartial();
 void uiHibernate();
+void uiRenderPlanes(Page page);
+const uint8_t *uiPlane(bool red);
+size_t uiPlaneBytes();
 
 #if UI_MOCK
 void uiDumpPage(Page page);

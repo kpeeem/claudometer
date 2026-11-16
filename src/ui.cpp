@@ -270,14 +270,16 @@ static uint8_t pageRows(Page page, Row rows[4]) {
     }
     if (settings.cardFable && count < 4)
         rows[count++] = {"Fable", "week", "7 days", &claudeState.fable, nullptr, "", claudeState.health};
-    if (settings.cardCodex && count < 4)
+    if (settings.cardCodex && count < 4) {
+        bool session = codexState.session.valid;
         rows[count++] = {"Codex",
                          codexState.plan.c_str(),
-                         "session",
-                         &codexState.session,
-                         settings.cardCodexWeek ? &codexState.week : nullptr,
+                         session ? "session" : "7 days",
+                         session ? &codexState.session : &codexState.week,
+                         session && settings.cardCodexWeek ? &codexState.week : nullptr,
                          "week",
                          codexState.health};
+    }
     return count;
 }
 
@@ -523,7 +525,6 @@ void uiPortalScreen(const char *ssid, const char *ip) {
 
 void uiHibernate() { display.hibernate(); }
 
-#if UI_MOCK
 class PlaneCanvas : public Adafruit_GFX {
   public:
     PlaneCanvas() : Adafruit_GFX(EPD_WIDTH, EPD_HEIGHT) {}
@@ -550,6 +551,19 @@ class PlaneCanvas : public Adafruit_GFX {
 
 static PlaneCanvas canvas;
 
+void uiRenderPlanes(Page page) {
+    canvas.clear();
+    canvas.fillScreen(theme.bg);
+    bindType(canvas);
+    drawPage(canvas, page);
+    bindType(display);
+}
+
+const uint8_t *uiPlane(bool red) { return red ? canvas.red : canvas.black; }
+
+size_t uiPlaneBytes() { return sizeof(canvas.black); }
+
+#if UI_MOCK
 static void emitPlane(const uint8_t *raw, size_t len) {
     for (size_t at = 0; at < len; at += 48) {
         size_t chunk = min((size_t)48, len - at);
@@ -572,11 +586,7 @@ static void dumpCanvas() {
 }
 
 void uiDumpPage(Page page) {
-    canvas.clear();
-    canvas.fillScreen(theme.bg);
-    bindType(canvas);
-    drawPage(canvas, page);
-    bindType(display);
+    uiRenderPlanes(page);
     dumpCanvas();
 }
 

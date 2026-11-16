@@ -266,7 +266,7 @@ static void pollSerial() {
 }
 
 void loop() {
-    netPollOta();
+    netPollServices();
 
     switch (linkPoll()) {
         case LinkEvent::Settings:

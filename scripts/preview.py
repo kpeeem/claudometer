@@ -1,11 +1,22 @@
-import base64, re, subprocess, sys, time
-import serial
+import base64, re, subprocess, sys, time, urllib.request
 
 PORT = "/dev/cu.usbmodem2101"
 W, H = 400, 300
+PLANE = W // 8 * H
+
+
+def fetch(host, page=0):
+    url = "http://%s/panel.bin?page=%d" % (host, page)
+    with urllib.request.urlopen(url, timeout=20) as answer:
+        raw = answer.read()
+    if len(raw) != PLANE * 2:
+        raise SystemExit("expected %d bytes, got %d" % (PLANE * 2, len(raw)))
+    return raw[:PLANE], raw[PLANE:]
 
 
 def capture(commands, settle=4.0, boot_wait=0.0):
+    import serial
+
     link = serial.Serial(PORT, 115200, timeout=1)
     deadline = time.time() + boot_wait
     while time.time() < deadline:
@@ -68,6 +79,11 @@ def write_png(planes, path, scale=2):
 
 if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else "preview/overview.png"
-    keys = sys.argv[2] if len(sys.argv) > 2 else ""
-    wait = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
-    write_png(capture(list(keys), boot_wait=wait), out)
+    second = sys.argv[2] if len(sys.argv) > 2 else ""
+    if second.startswith("http") or "." in second:
+        host = second.removeprefix("http://").rstrip("/")
+        page = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+        write_png(fetch(host, page), out)
+    else:
+        wait = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
+        write_png(capture(list(second), boot_wait=wait), out)
