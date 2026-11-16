@@ -340,7 +340,7 @@ static void drawHelp(Adafruit_GFX &g) {
     helpLine(g, 76, "USER", "tap", "next page");
     helpLine(g, 94, "USER", "hold", "refresh now");
     helpLine(g, 112, "BOOT", "tap", "this screen");
-    helpLine(g, 130, "BOOT", "hold 2s", "Wi-Fi, tokens, cards, theme");
+    helpLine(g, 130, "BOOT", "hold 2s", "Wi-Fi, source, cards, theme");
 
     g.drawFastHLine(L::MARGIN, 150, L::CONTENT, theme.accent);
 
@@ -353,7 +353,7 @@ static void drawHelp(Adafruit_GFX &g) {
         numbers = linkConnected() ? "Agent Meter connected" : "waiting for Agent Meter";
 
     helpLine(g, 172, "WI-FI", "", net.c_str());
-    helpLine(g, 190, settings.source == SOURCE_MAC ? "MAC" : "PROXY", "", numbers.c_str());
+    helpLine(g, 190, settings.source == SOURCE_MAC ? "LINK" : "PROXY", "", numbers.c_str());
     helpLine(g, 208, "EVERY", "", (String(settings.refreshMinutes) + " min   theme " + uiThemeName(settings.theme)).c_str());
     helpLine(g, 226, "BOARD", "", (String(BOARD_NAME) + "   firmware " + FW_VERSION + "   ota quotaboard.local").c_str());
 
