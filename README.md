@@ -48,7 +48,7 @@ After the first flash you never need the cable again:
 ./scripts/ota.sh
 ```
 
-Two things make or break that, both learned the hard way:
+Three things make or break that, all learned the hard way:
 
 - The partition table must have **two** app slots. `huge_app.csv` has only `app0`, so there is
   nowhere to write an incoming image and the board calls `abort()` a moment after the transfer
@@ -56,6 +56,14 @@ Two things make or break that, both learned the hard way:
   6.5 MB slots on the board's 16 MB flash. Changing the partition table needs one USB flash.
 - The Mac firewall must let the uploader accept the inbound connection the board makes back to it.
   Symptoms otherwise are `No response from device`, or `Authenticating...OK` followed by a stall.
+- PlatformIO's bundled esptool needs `click` older than 8.2, even though the upload itself never
+  touches esptool: the build still generates `bootloader.bin`, and against a newer click that dies
+  with `ParamType.get_metavar() missing 1 required positional argument`. Pin it inside PlatformIO's
+  own virtualenv, which is what `platformio` 6.2 wants anyway:
+
+  ```bash
+  ~/.platformio/penv/bin/python -m pip install 'click<8.2'
+  ```
 
 ## What is on screen
 
