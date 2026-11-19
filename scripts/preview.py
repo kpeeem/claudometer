@@ -80,7 +80,11 @@ def write_png(planes, path, scale=2):
 if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else "preview/overview.png"
     second = sys.argv[2] if len(sys.argv) > 2 else ""
-    if second.startswith("http") or "." in second:
+    if second.endswith(".bin"):
+        with open(second, "rb") as handle:
+            raw = handle.read()
+        write_png((raw[:PLANE], raw[PLANE:]), out)
+    elif second.startswith("http") or "." in second:
         host = second.removeprefix("http://").rstrip("/")
         page = int(sys.argv[3]) if len(sys.argv) > 3 else 0
         write_png(fetch(host, page), out)
