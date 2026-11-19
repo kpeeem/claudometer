@@ -322,19 +322,21 @@ static void sendPanel() {
 }
 
 void netStartServices() {
-    if (otaUp) return;
-    ArduinoOTA.setHostname("quotaboard");
-    ArduinoOTA.setPassword(OTA_PASSWORD);
-    ArduinoOTA.onStart([] { log_i("ota start"); });
-    ArduinoOTA.onEnd([] { log_i("ota done"); });
-    ArduinoOTA.onError([](ota_error_t error) { log_e("ota error %u", error); });
-    ArduinoOTA.begin();
-    otaUp = true;
+    if (panel) return;
+    if (*OTA_PASSWORD) {
+        ArduinoOTA.setHostname("quotaboard");
+        ArduinoOTA.setPassword(OTA_PASSWORD);
+        ArduinoOTA.onStart([] { log_i("ota start"); });
+        ArduinoOTA.onEnd([] { log_i("ota done"); });
+        ArduinoOTA.onError([](ota_error_t error) { log_e("ota error %u", error); });
+        ArduinoOTA.begin();
+        otaUp = true;
+    }
 
     panel = new WebServer(80);
     panel->on("/panel.bin", sendPanel);
     panel->begin();
-    log_i("ota and /panel.bin ready on quotaboard.local");
+    log_i("/panel.bin ready on quotaboard.local, ota %s", otaUp ? "on" : "off without a password");
 }
 
 void netPollOta() {
