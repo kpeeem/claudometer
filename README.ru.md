@@ -6,7 +6,7 @@
 
 <p align="center">
   Лимиты Claude и Codex на 4,2″ табло с электронной бумагой у тебя на столе.<br>
-  Цифры приходят из <a href="https://github.com/kpeeem/agent-meter">Agent Meter</a> по Bluetooth, токенов на плате нет.
+  Цифры приходят из <a href="https://github.com/kpeeem/agent-meter/blob/main/README.ru.md">Agent Meter</a> по Bluetooth, токенов на плате нет.
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 
 <p align="center"><a href="README.md">English</a> · <b>Русский</b></p>
 
-> **TL;DR** — возьми [RockBase NM-EPD-420](https://wiki.rockbaseiot.com/docs/products/nm-epd-420/), прошей по USB `claudometer-<версия>-3c.bin` из [Releases](https://github.com/kpeeem/claudometer/releases/latest), подключись к Wi-Fi **Quota-Setup** и укажи свою сеть, потом включи **Настройки → Табло лимитов** в [Agent Meter](https://github.com/kpeeem/agent-meter). Mac передаёт те же цифры, что показывает в строке меню, а плата не хранит ни одного токена.
+> **TL;DR** — возьми [RockBase NM-EPD-420](https://wiki.rockbaseiot.com/docs/products/nm-epd-420/), прошей по USB `claudometer-<версия>-3c.bin` из [Releases](https://github.com/kpeeem/claudometer/releases/latest), подключись к Wi-Fi **Quota-Setup** и укажи свою сеть, потом включи **Настройки → Табло лимитов** в [Agent Meter](https://github.com/kpeeem/agent-meter/blob/main/README.ru.md). Mac передаёт те же цифры, что показывает в строке меню, а плата не хранит ни одного токена.
 
 ## На экране
 
