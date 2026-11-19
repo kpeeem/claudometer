@@ -14,6 +14,7 @@
   <a href="https://github.com/kpeeem/claudometer/actions/workflows/firmware.yml"><img src="https://github.com/kpeeem/claudometer/actions/workflows/firmware.yml/badge.svg" alt="Build"></a>
   <img src="https://img.shields.io/badge/ESP32--S3-PlatformIO-orange" alt="ESP32-S3, PlatformIO">
   <img src="https://img.shields.io/badge/e--paper-400×300-black" alt="400×300 e-paper">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/kpeeem/claudometer" alt="MIT license"></a>
 </p>
 
 <p align="center"><b>English</b> · <a href="README.ru.md">Русский</a></p>
@@ -122,3 +123,7 @@ A board on your network serves what is on the glass right now: `python3 -I scrip
 | Case | `plate.3mf` — Bambu Studio plate: front bezel, rear cover and three button caps |
 
 Built on [GxEPD2](https://github.com/ZinggJM/GxEPD2), [U8g2 for Adafruit GFX](https://github.com/olikraus/U8g2_for_Adafruit_GFX), [NimBLE-Arduino](https://github.com/h2zero/NimBLE-Arduino) and [ArduinoJson](https://arduinojson.org).
+
+## License
+
+The code in this repository is under the [MIT license](LICENSE). The flash images also contain [GxEPD2](https://github.com/ZinggJM/GxEPD2), which is GPL-3.0, so the images on the Releases page are distributed under GPL-3.0.

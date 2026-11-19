@@ -14,6 +14,7 @@
   <a href="https://github.com/kpeeem/claudometer/actions/workflows/firmware.yml"><img src="https://github.com/kpeeem/claudometer/actions/workflows/firmware.yml/badge.svg" alt="Сборка"></a>
   <img src="https://img.shields.io/badge/ESP32--S3-PlatformIO-orange" alt="ESP32-S3, PlatformIO">
   <img src="https://img.shields.io/badge/e--paper-400×300-black" alt="Электронная бумага 400×300">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/kpeeem/claudometer" alt="Лицензия MIT"></a>
 </p>
 
 <p align="center"><a href="README.md">English</a> · <b>Русский</b></p>
@@ -122,3 +123,7 @@ pio run -e quotaboard -t upload
 | Корпус | `plate.3mf` — стол Bambu Studio: передняя рамка, задняя крышка и три кнопки |
 
 Собрано на [GxEPD2](https://github.com/ZinggJM/GxEPD2), [U8g2 for Adafruit GFX](https://github.com/olikraus/U8g2_for_Adafruit_GFX), [NimBLE-Arduino](https://github.com/h2zero/NimBLE-Arduino) и [ArduinoJson](https://arduinojson.org).
+
+## Лицензия
+
+Код в этом репозитории под [лицензией MIT](LICENSE). В образы прошивки входит [GxEPD2](https://github.com/ZinggJM/GxEPD2) под GPL-3.0, поэтому образы со страницы Releases распространяются на условиях GPL-3.0.
