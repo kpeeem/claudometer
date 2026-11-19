@@ -21,6 +21,14 @@
 
 > **TL;DR** — Take a [RockBase NM-EPD-420](https://wiki.rockbaseiot.com/docs/products/nm-epd-420/), flash `claudometer-<version>-3c.bin` from [Releases](https://github.com/kpeeem/claudometer/releases/latest) over USB, join the **Quota-Setup** Wi-Fi to set your network, then tick **Settings → Quota board** in [Agent Meter](https://github.com/kpeeem/agent-meter). The Mac pushes the same numbers it shows in the menu bar; the board stores no tokens.
 
+## The board
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/RockBase-lab/NM-EPD-420/fc1ec047f78c83bc1d80a75036d4e6708b50d71d/image/esp-dashboard.png" width="49%" alt="RockBase NM-EPD-420 in black and white cases on a desk">
+  <img src="https://raw.githubusercontent.com/RockBase-lab/NM-EPD-420/fc1ec047f78c83bc1d80a75036d4e6708b50d71d/image/nm_epd_420_interfaces_no_lora.png" width="49%" alt="NM-EPD-420 board map: ESP32-S3R8, e-paper connector, buttons, AHT20, microSD, audio, battery charger">
+</p>
+<p align="center"><sub>RockBase NM-EPD-420: ESP32-S3, 4.2″ e-paper, buttons, temperature sensor and a LiPo charger in a desk case. Photos: <a href="https://wiki.rockbaseiot.com/docs/products/nm-epd-420/">RockBase IoT</a></sub></p>
+
 ## On the glass
 
 | Paper | Ink | Mono |

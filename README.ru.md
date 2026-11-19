@@ -21,6 +21,14 @@
 
 > **TL;DR** — возьми [RockBase NM-EPD-420](https://wiki.rockbaseiot.com/docs/products/nm-epd-420/), прошей по USB `claudometer-<версия>-3c.bin` из [Releases](https://github.com/kpeeem/claudometer/releases/latest), подключись к Wi-Fi **Quota-Setup** и укажи свою сеть, потом включи **Настройки → Табло лимитов** в [Agent Meter](https://github.com/kpeeem/agent-meter/blob/main/README.ru.md). Mac передаёт те же цифры, что показывает в строке меню, а плата не хранит ни одного токена.
 
+## Плата
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/RockBase-lab/NM-EPD-420/fc1ec047f78c83bc1d80a75036d4e6708b50d71d/image/esp-dashboard.png" width="49%" alt="RockBase NM-EPD-420 в чёрном и белом корпусах на столе">
+  <img src="https://raw.githubusercontent.com/RockBase-lab/NM-EPD-420/fc1ec047f78c83bc1d80a75036d4e6708b50d71d/image/nm_epd_420_interfaces_no_lora.png" width="49%" alt="Схема платы NM-EPD-420: ESP32-S3R8, разъём экрана, кнопки, AHT20, microSD, звук, зарядка аккумулятора">
+</p>
+<p align="center"><sub>RockBase NM-EPD-420: ESP32-S3, электронная бумага 4,2″, кнопки, датчик температуры и зарядка LiPo в настольном корпусе. Фото: <a href="https://wiki.rockbaseiot.com/docs/products/nm-epd-420/">RockBase IoT</a></sub></p>
+
 ## На экране
 
 | Бумага | Чернила | Моно |
